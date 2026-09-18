@@ -158,7 +158,7 @@ docker compose up -d
 
 ```bash
 git clone https://github.com/zwang1790-debug/yutan
-cd ai-goofish-monitor
+cd yutan
 cp .env.example .env
 ```
 
