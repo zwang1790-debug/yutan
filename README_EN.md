@@ -4,6 +4,10 @@
 
 A Playwright and AI-powered opportunity monitoring tool for Goofish (闲鱼), featuring a complete web management interface.
 
+## Purchase and Activation
+
+For trial access, installation help, and device activation codes, contact our business WeChat: **wgviptop**. See [SALES.md](SALES.md) for current plans and delivery terms.
+
 ## Core Features
 
 - **Web Visual Management**: Task management, account management, AI criteria editing, run logs, results browsing
