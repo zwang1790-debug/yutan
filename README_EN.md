@@ -22,6 +22,8 @@ This is the recommended path for customers. The Windows installer and activation
 
 For installation, configuration, and activation help, contact **wgviptop** or join the [Telegram user community](https://t.me/+wyTMBj6IuRBjN2U1).
 
+Download the latest installer from the repository [Releases](https://github.com/zwang1790-debug/yutan/releases). Future Windows versions will be published there as well. See [Windows release process](RELEASING.md) for maintainers.
+
 ## Core Features
 
 - **Web Visual Management**: Task management, account management, AI criteria editing, run logs, results browsing

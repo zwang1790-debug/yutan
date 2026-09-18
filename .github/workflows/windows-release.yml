@@ -1,0 +1,103 @@
+name: Windows installer release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the leading v, for example 2.1.2"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve and validate version
+        id: version
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:EVENT_NAME -eq "workflow_dispatch") {
+            $version = $env:INPUT_VERSION.TrimStart('v')
+          } else {
+            $version = $env:REF_NAME.TrimStart('v')
+          }
+
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Version must use MAJOR.MINOR.PATCH, got '$version'."
+          }
+
+          $releaseInfo = Get-Content "src/services/release_info_service.py" -Raw
+          $match = [regex]::Match($releaseInfo, 'VERSION\s*=\s*"([^"]+)"')
+          if (-not $match.Success) {
+            throw "Could not find VERSION in src/services/release_info_service.py."
+          }
+          if ($match.Groups[1].Value -ne $version) {
+            throw "Tag version $version does not match src/services/release_info_service.py VERSION $($match.Groups[1].Value). Update the source version before releasing."
+          }
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "tag=v$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build the Windows application package
+        shell: pwsh
+        run: .\windows\build_windows.ps1
+
+      - name: Build the Windows installer
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $candidates = @(
+            "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { throw "Inno Setup compiler was not found." }
+
+          & $iscc "/DAppVersion=$env:VERSION" "$env:GITHUB_WORKSPACE\windows\installer.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
+
+          $installer = "$env:GITHUB_WORKSPACE\release\YuTanRadar-Setup-$env:VERSION.exe"
+          if (-not (Test-Path $installer)) { throw "Installer was not created: $installer" }
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path $installer -Leaf)" | Set-Content "$installer.sha256" -Encoding ascii
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: 鱼探 Radar ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          body: |
+            ## 鱼探 Radar Windows 安装包
+
+            面向购买用户的 Windows 一键安装版本。普通用户不需要安装 Docker、Python、Node.js 或 Playwright。
+
+            - 安装包：`YuTanRadar-Setup-${{ steps.version.outputs.version }}.exe`
+            - 购买、安装协助和激活码：微信 `wgviptop`
+            - 用户交流群与更新通知：https://t.me/+wyTMBj6IuRBjN2U1
+            - SHA256 校验值见同名 `.sha256` 文件
+          files: |
+            release/YuTanRadar-Setup-${{ steps.version.outputs.version }}.exe
+            release/YuTanRadar-Setup-${{ steps.version.outputs.version }}.exe.sha256

@@ -24,6 +24,8 @@ Telegram 用户交流群 / 更新通知：[加入群聊](https://t.me/+wyTMBj6Iu
 
 安装、配置和激活遇到问题，可联系微信 **wgviptop**，也可加入 [Telegram 用户交流群](https://t.me/+wyTMBj6IuRBjN2U1) 获取答疑和更新通知。
 
+最新版安装包请前往仓库 [Releases](https://github.com/zwang1790-debug/yutan/releases) 下载；后续版本会同步发布到这里。开发者可查看 [Windows 发布流程](RELEASING.md)。
+
 
 ## 核心特性
 

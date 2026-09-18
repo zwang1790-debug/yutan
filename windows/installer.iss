@@ -2,7 +2,9 @@
 ; Build the application first with build_windows.ps1.
 
 #define AppName "鱼探 Radar"
+#ifndef AppVersion
 #define AppVersion "2.1.1"
+#endif
 #define AppPublisher "鱼探 Radar"
 #define AppExeName "YuTanRadar.exe"
 #define ReleaseDir "..\release\YuTanRadar"

@@ -38,6 +38,7 @@ from src.services.scheduler_service import SchedulerService
 from src.services.task_log_cleanup_service import cleanup_task_logs
 from src.services.task_generation_service import TaskGenerationService
 from src.services.task_run_history_service import record_finish, record_start
+from src.services.release_info_service import VERSION as APP_VERSION
 from src.infrastructure.persistence.sqlite_bootstrap import bootstrap_sqlite_storage
 from src.infrastructure.persistence.sqlite_connection import sqlite_connection
 from src.infrastructure.persistence.sqlite_task_repository import SqliteTaskRepository
@@ -128,7 +129,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="鱼探 Radar",
     description="闲鱼机会监测与智能分析",
-    version="2.1.1",
+    version=APP_VERSION,
     lifespan=lifespan
 )
 
