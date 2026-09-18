@@ -15,3 +15,17 @@ prompts/
 .serena/
 price_history/
 data/
+license-keys/
+
+# Local build outputs, packaged releases, caches, and test artifacts
+build-cache/
+build-license-issuer/
+build-output/
+build-work/
+dist-license-issuer/
+release/
+.venv-windows-build/
+.playwright-browsers/
+.pytest_cache/
+.coverage
+temp_results.json

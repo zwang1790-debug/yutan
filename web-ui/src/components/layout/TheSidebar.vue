@@ -8,6 +8,8 @@ import {
   Layers, 
   Terminal, 
   Settings2,
+  CircleDollarSign,
+  ShieldCheck,
   ChevronRight
 } from 'lucide-vue-next'
 import { useWebSocket } from '@/composables/useWebSocket'
@@ -27,6 +29,10 @@ const navItems = computed(() => [
   { to: '/logs', label: t('sidebar.logs'), icon: Terminal },
   { to: '/settings', label: t('sidebar.settings'), icon: Settings2 },
 ])
+const commercialItems = computed(() => [
+  { to: '/pricing', label: t('sidebar.pricing'), icon: CircleDollarSign },
+  { to: '/license', label: t('sidebar.license'), icon: ShieldCheck },
+])
 
 const connectionLabel = computed(() => (
   isConnected.value ? t('sidebar.backendConnected') : t('sidebar.backendConnecting')
@@ -39,59 +45,81 @@ const connectionTone = computed(() =>
 </script>
 
 <template>
-  <nav class="space-y-1">
+  <nav class="max-h-full space-y-1 overflow-y-auto overscroll-contain pr-1">
     <RouterLink
       v-for="item in navItems"
       :key="item.to"
       :to="item.to"
       v-slot="{ isActive }"
-      class="group relative flex items-center px-4 py-3 rounded-xl transition-all duration-200 overflow-hidden"
+      class="group relative flex min-h-11 items-center rounded-xl px-2 py-1.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       @click="emit('navigate')"
     >
-      <!-- Active Background Effect -->
-      <div 
-        v-if="isActive" 
-        class="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent z-0"
-      ></div>
-      <div 
-        v-if="isActive" 
-        class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full"
-      ></div>
-
-      <div class="relative z-10 flex items-center w-full">
+      <div
+        class="relative z-10 flex w-full items-center rounded-lg px-3.5 py-2.5"
+        :class="isActive ? 'border-l-2 border-primary bg-blue-50 text-slate-950' : 'border-l-2 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'"
+      >
         <component 
           :is="item.icon" 
           class="w-5 h-5 mr-3 transition-colors"
           :class="isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600'"
         />
         <span 
-          class="text-sm font-bold transition-colors flex-grow"
-          :class="isActive ? 'text-slate-900' : 'text-slate-500 group-hover:text-slate-700'"
+          class="flex-grow text-sm font-semibold transition-colors"
+          :class="isActive ? 'text-slate-950' : 'text-slate-600 group-hover:text-slate-800'"
         >
           {{ item.label }}
         </span>
         <ChevronRight 
           v-if="isActive"
-          class="w-4 h-4 text-primary animate-in fade-in slide-in-from-left-2"
+          class="h-4 w-4 text-primary"
         />
       </div>
     </RouterLink>
 
+    <div class="mt-4 border-t border-slate-200 pt-4">
+      <p class="px-3.5 pb-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+        {{ t('sidebar.commercial') }}
+      </p>
+      <RouterLink
+        v-for="item in commercialItems"
+        :key="item.to"
+        :to="item.to"
+        v-slot="{ isActive }"
+        class="group relative flex min-h-11 items-center rounded-xl px-2 py-1.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        @click="emit('navigate')"
+      >
+        <div
+          class="relative z-10 flex w-full items-center rounded-lg px-3.5 py-2.5"
+          :class="isActive ? 'border-l-2 border-primary bg-blue-50 text-slate-950' : 'border-l-2 border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800'"
+        >
+          <component
+            :is="item.icon"
+            class="mr-3 h-5 w-5 transition-colors"
+            :class="isActive ? 'text-primary' : 'text-slate-400 group-hover:text-slate-600'"
+          />
+          <span
+            class="flex-grow text-sm font-semibold transition-colors"
+            :class="isActive ? 'text-slate-950' : 'text-slate-600 group-hover:text-slate-800'"
+          >
+            {{ item.label }}
+          </span>
+          <ChevronRight
+            v-if="isActive"
+            class="h-4 w-4 text-primary"
+          />
+        </div>
+      </RouterLink>
+    </div>
+
     <!-- Support Section -->
-    <div class="mt-12 px-4">
-      <div class="rounded-2xl p-4 bg-slate-50/50 border border-slate-100 border-dashed">
-         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{{ t('sidebar.systemStatus') }}</p>
+    <div class="mt-8 px-1">
+      <div class="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3">
+         <p class="eyebrow mb-2">{{ t('sidebar.systemStatus') }}</p>
          <div class="flex items-center gap-2">
             <div class="w-2 h-2 rounded-full" :class="connectionTone"></div>
-            <span class="text-xs font-bold text-slate-600">{{ connectionLabel }}</span>
+            <span class="text-xs font-semibold text-slate-600">{{ connectionLabel }}</span>
          </div>
       </div>
     </div>
   </nav>
 </template>
-
-<style scoped>
-.router-link-active {
-  background-color: transparent !important;
-}
-</style>

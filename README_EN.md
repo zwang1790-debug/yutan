@@ -1,8 +1,8 @@
-# Xianyu Intelligent Monitor Bot
+# YuTan Radar
 
 [中文](README.md) ｜ [English]
 
-A Playwright and AI-powered multi-task real-time monitoring tool for Xianyu (闲鱼), featuring a complete web management interface.
+A Playwright and AI-powered opportunity monitoring tool for Goofish (闲鱼), featuring a complete web management interface.
 
 ## Core Features
 
@@ -45,7 +45,8 @@ cp .env.example .env
 | `OPENAI_API_KEY` | AI model API key | Yes |
 | `OPENAI_BASE_URL` | OpenAI-compatible API base URL | Yes |
 | `OPENAI_MODEL_NAME` | Model name with image input support | Yes |
-| `WEB_USERNAME` / `WEB_PASSWORD` | Web UI login credentials, default `admin/admin123` | No |
+| `WEB_USERNAME` / `WEB_PASSWORD` | Legacy Web UI credentials; the default `admin/admin123` starts first-run registration | No |
+| `WEB_AUTH_FILE` | Local admin account file, default `data/web_auth.json`; passwords and recovery codes are hashed | No |
 
 See "Configuration" below for the rest.
 
@@ -218,9 +219,10 @@ See `.env.example` for the full list.
 <details>
 <summary>Click to expand authentication notes</summary>
 
-- The Web UI uses a login page and validates credentials through `POST /auth/status`.
-- After login, the frontend stores local auth state for route guards and WebSocket startup.
-- The default credentials are `admin/admin123`; change them in production.
+- The Web UI uses a signed HttpOnly session cookie; `data/web_auth.json` stores no plaintext password.
+- With the default configuration, first use creates the administrator through `POST /auth/register`; a custom legacy `.env` account can sign in and migrate automatically.
+- `POST /auth/password` supports voluntary password changes after login, while `POST /auth/recover` resets a forgotten password with a recovery code.
+- Recovery codes are shown only when created or regenerated. Save them separately; a code becomes invalid after a successful recovery.
 
 </details>
 

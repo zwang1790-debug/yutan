@@ -263,12 +263,16 @@ export function useResults() {
     if (value) localStorage.setItem('lastSelectedResultFile', value)
   })
   watch(
-    [() => route.query.file, files],
-    ([routeFile, currentFiles]) => {
-      if (typeof routeFile !== 'string') return
-      if (currentFiles.includes(routeFile)) {
+    [() => route.query.file, () => route.query.keyword, files],
+    ([routeFile, routeKeyword, currentFiles]) => {
+      if (typeof routeFile === 'string' && currentFiles.includes(routeFile)) {
         selectedFile.value = routeFile
+        return
       }
+      if (typeof routeKeyword !== 'string') return
+      const normalizedKeyword = normalizeKeyword(routeKeyword)
+      const match = currentFiles.find((file) => getKeywordFromFilename(file) === normalizedKeyword)
+      if (match) selectedFile.value = match
     },
     { immediate: true }
   )

@@ -33,6 +33,14 @@ class _FakeSchedulerService:
 class _FakeProcessService:
     def __init__(self):
         self.stop_all_called = False
+        self.monitor_started = False
+        self.monitor_stopped = False
+
+    def start_license_monitor(self):
+        self.monitor_started = True
+
+    async def stop_license_monitor(self):
+        self.monitor_stopped = True
 
     async def stop_all(self):
         self.stop_all_called = True
@@ -59,10 +67,38 @@ def test_lifespan_cleans_task_logs_on_startup(monkeypatch):
         async with app_module.lifespan(None):
             assert fake_scheduler.started is True
             assert fake_scheduler.reload_payload == []
+            assert fake_process.monitor_started is True
 
     asyncio.run(_run())
 
     assert called["bootstrapped"] is True
     assert called["keep_days"] == 9
     assert fake_scheduler.stopped is True
+    assert fake_process.monitor_stopped is True
     assert fake_process.stop_all_called is True
+
+
+def test_lifespan_closes_stale_task_run_history(monkeypatch):
+    class _Task:
+        id = 12
+        is_running = False
+
+    class _TaskServiceWithTask(_FakeTaskService):
+        async def get_all_tasks(self):
+            return [_Task()]
+
+    finished = []
+    monkeypatch.setattr(app_module, "scheduler_service", _FakeSchedulerService())
+    monkeypatch.setattr(app_module, "process_service", _FakeProcessService())
+    monkeypatch.setattr(app_module, "TaskService", _TaskServiceWithTask)
+    monkeypatch.setattr(app_module, "SqliteTaskRepository", lambda: object())
+    monkeypatch.setattr(app_module, "bootstrap_sqlite_storage", lambda: None)
+    monkeypatch.setattr(app_module, "cleanup_task_logs", lambda **_kwargs: None)
+    monkeypatch.setattr(app_module, "record_finish", lambda task_id, exit_code: finished.append((task_id, exit_code)))
+
+    async def _run():
+        async with app_module.lifespan(None):
+            pass
+
+    asyncio.run(_run())
+    assert finished == [(12, None)]

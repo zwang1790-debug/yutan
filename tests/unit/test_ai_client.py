@@ -278,5 +278,10 @@ def test_sanitize_no_proxy_handles_both_keys(monkeypatch):
     monkeypatch.setenv("NO_PROXY", "::1/128")
     monkeypatch.setenv("no_proxy", "fe80::1/10")
     _sanitize_no_proxy_env()
-    assert os.environ["NO_PROXY"] == "::1"
-    assert os.environ["no_proxy"] == "fe80::1"
+    if os.name == "nt":
+        # Windows stores environment variable names case-insensitively, so the
+        # second assignment replaces the first before sanitization can run.
+        assert os.environ["NO_PROXY"] == "fe80::1"
+    else:
+        assert os.environ["NO_PROXY"] == "::1"
+        assert os.environ["no_proxy"] == "fe80::1"

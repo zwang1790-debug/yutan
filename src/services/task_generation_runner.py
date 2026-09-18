@@ -6,7 +6,7 @@ import os
 import aiofiles
 
 from src.domain.models.task import TaskCreate, TaskGenerateRequest
-from src.prompt_utils import generate_criteria
+from src.prompt_utils import generate_criteria, validate_generated_criteria
 from src.services.scheduler_service import SchedulerService
 from src.services.task_generation_service import TaskGenerationService
 from src.services.task_service import TaskService
@@ -44,8 +44,7 @@ def build_task_create(req: TaskGenerateRequest, criteria_file: str) -> TaskCreat
 
 
 async def save_generated_criteria(output_filename: str, generated_criteria: str) -> None:
-    if not generated_criteria or not generated_criteria.strip():
-        raise RuntimeError("AI 未能生成分析标准，返回内容为空。")
+    generated_criteria = validate_generated_criteria(generated_criteria)
 
     os.makedirs("prompts", exist_ok=True)
     async with aiofiles.open(output_filename, "w", encoding="utf-8") as file:

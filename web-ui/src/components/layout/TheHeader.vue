@@ -3,14 +3,15 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Button } from '@/components/ui/button'
 import DashboardTaskSearch from '@/components/layout/DashboardTaskSearch.vue'
+import BrandMark from '@/components/layout/BrandMark.vue'
 import LocaleToggle from '@/components/layout/LocaleToggle.vue'
+import AccountSecurityDialog from '@/components/layout/AccountSecurityDialog.vue'
 import { 
-  Zap, 
   Bell, 
   Search, 
   UserCircle,
   HelpCircle,
-  Menu
+  Menu,
 } from 'lucide-vue-next'
 import Badge from '@/components/ui/badge/Badge.vue'
 import { useMobileNav } from '@/composables/useMobileNav'
@@ -19,14 +20,10 @@ import { useI18n } from 'vue-i18n'
 const router = useRouter()
 const route = useRoute()
 const { toggleMobileNav } = useMobileNav()
-const inactiveSearchValue = ref('')
+const isAccountDialogOpen = ref(false)
 const { t } = useI18n()
 
 const isDashboard = computed(() => route.name === 'Dashboard')
-
-function goAccounts() {
-  router.push('/accounts')
-}
 
 function goNotifications() {
   router.push({ name: 'Settings', query: { tab: 'notifications' } })
@@ -35,43 +32,40 @@ function goNotifications() {
 function goPrompts() {
   router.push({ name: 'Settings', query: { tab: 'prompts' } })
 }
+
 </script>
 
 <template>
-  <header class="flex items-center justify-between px-6 h-16 bg-white/60 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-[100]">
+  <header class="flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md sm:px-6">
     <!-- Brand Logo -->
     <RouterLink
       to="/dashboard"
-      class="flex items-center gap-2 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      class="group flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       :aria-label="t('header.goHome')"
     >
-      <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20 transition-transform group-hover:rotate-12">
-        <Zap class="w-5 h-5 text-white fill-white" />
+      <BrandMark :size="40" />
+      <div class="min-w-0 leading-none">
+        <h1 class="truncate text-[17px] font-black tracking-[-0.03em] text-slate-950">
+          {{ t('app.name') }}
+        </h1>
+        <p class="mt-1 hidden truncate text-[10px] font-semibold tracking-[0.08em] text-slate-400 sm:block">
+          {{ t('app.tagline') }}
+        </p>
       </div>
-      <h1 class="text-lg font-black text-slate-800 tracking-tighter">
-        AI <span class="text-primary">Xianyu</span> Hunter
-      </h1>
-      <Badge variant="outline" class="ml-2 text-[10px] font-bold border-primary/20 text-primary bg-primary/5 uppercase tracking-widest hidden sm:flex">
-        PRO
+      <Badge variant="outline" class="ml-1 hidden border-primary/20 bg-primary/5 text-[10px] font-bold uppercase tracking-widest text-primary sm:flex">
+        {{ t('app.mode') }}
       </Badge>
     </RouterLink>
 
     <!-- Search & Navigation -->
-    <div class="hidden md:flex flex-grow max-w-md mx-8">
+    <div class="mx-6 hidden max-w-md flex-1 md:flex">
       <DashboardTaskSearch v-if="isDashboard" />
-      <div v-else class="relative w-full group">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors" />
-        <input 
-          type="text" 
-          v-model="inactiveSearchValue"
-          readonly
-          aria-disabled="true"
-          :placeholder="t('header.searchUnavailable')"
-          class="w-full h-10 pl-10 pr-4 bg-slate-100/50 border border-slate-200/50 rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-white focus:border-primary/50"
-        />
-        <kbd class="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-slate-300 bg-white text-[10px] text-slate-400 font-sans shadow-sm pointer-events-none">
-          /
-        </kbd>
+      <div v-else class="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-400" :aria-label="t('header.searchUnavailable')">
+        <span class="flex min-w-0 items-center gap-2">
+          <Search class="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span class="truncate">{{ t('header.searchUnavailable') }}</span>
+        </span>
+        <span class="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">{{ t('header.searchUnavailableBadge') }}</span>
       </div>
     </div>
 
@@ -106,16 +100,17 @@ function goPrompts() {
 
       <Button 
         variant="ghost" 
-        class="hidden sm:flex items-center gap-2 pl-2 pr-4 rounded-full hover:bg-slate-100 transition-all active:scale-95"
-        :aria-label="t('header.openAccounts')"
-        @click="goAccounts"
+        class="flex items-center gap-2 rounded-full px-2 transition-all hover:bg-slate-100 active:scale-95 sm:pl-2 sm:pr-4"
+        :aria-label="t('header.accountSecurity')"
+        :title="t('header.accountSecurity')"
+        @click="isAccountDialogOpen = true"
       >
         <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden border border-slate-300 shadow-sm">
            <UserCircle class="w-6 h-6 text-slate-500" />
         </div>
-        <div class="text-left hidden lg:block">
-           <p class="text-xs font-black text-slate-700 leading-none mb-0.5">Xianyu Admin</p>
-           <p class="text-[10px] text-slate-400 font-medium">{{ t('header.accountManagement') }}</p>
+        <div class="hidden text-left lg:block">
+           <p class="text-xs font-black text-slate-700 leading-none mb-0.5">{{ t('app.workspace') }}</p>
+           <p class="text-[10px] text-slate-400 font-medium">{{ t('header.accountSecurity') }}</p>
         </div>
       </Button>
 
@@ -130,4 +125,5 @@ function goPrompts() {
       </Button>
     </div>
   </header>
+  <AccountSecurityDialog v-model:open="isAccountDialogOpen" />
 </template>

@@ -41,10 +41,9 @@ def _fallback_unique_key(record: dict, item: dict) -> str:
 
 
 def _parse_raw_record(raw_json: str, *, status: str | None = None) -> dict:
-    record = json.loads(raw_json)
-    if status is not None:
-        record["_status"] = status
-    return record
+    # Keep stored crawler output immutable. Visibility metadata belongs to the
+    # read model and is attached only when an item is actually hidden.
+    return json.loads(raw_json)
 
 
 def _build_query_conditions(
@@ -100,10 +99,12 @@ def _decorate_record_visibility(record: dict, status: str | None, blacklist_keyw
     elif matched_keywords:
         hidden_reason = "rule"
 
+    if hidden_reason is None:
+        return record
     record["_status"] = status or "active"
     record["_matched_blacklist_keywords"] = matched_keywords
     record["_hidden_reason"] = hidden_reason
-    record["_effective_hidden"] = hidden_reason is not None
+    record["_effective_hidden"] = True
     return record
 
 
@@ -247,6 +248,14 @@ def _delete_result_file_records_sync(filename: str) -> int:
     with sqlite_connection() as conn:
         cursor = conn.execute(
             "DELETE FROM result_items WHERE result_filename = ?",
+            (filename,),
+        )
+        conn.execute(
+            "DELETE FROM profit_estimates WHERE result_filename = ?",
+            (filename,),
+        )
+        conn.execute(
+            "DELETE FROM inventory_records WHERE result_filename = ?",
             (filename,),
         )
         conn.commit()
@@ -407,6 +416,20 @@ async def update_item_status(filename: str, item_id: str, status: str) -> bool:
     if status not in valid:
         raise ValueError(f"status must be one of {valid}")
     return await asyncio.to_thread(_update_item_status_sync, filename, item_id, status)
+
+
+async def result_item_exists(filename: str, item_id: str) -> bool:
+    return await asyncio.to_thread(_result_item_exists_sync, filename, item_id)
+
+
+def _result_item_exists_sync(filename: str, item_id: str) -> bool:
+    bootstrap_sqlite_storage()
+    with sqlite_connection() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM result_items WHERE result_filename = ? AND item_id = ? LIMIT 1",
+            (filename, item_id),
+        ).fetchone()
+    return row is not None
 
 
 def _update_item_status_sync(filename: str, item_id: str, status: str) -> bool:

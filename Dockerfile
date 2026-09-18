@@ -42,6 +42,8 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+RUN groupadd --system app && useradd --system --gid app --create-home app
+
 COPY --from=frontend-builder /dist /app/dist
 
 COPY src /app/src
@@ -50,11 +52,12 @@ COPY prompts /app/prompts
 COPY static /app/static
 COPY config.json.example /app/config.json.example
 
-RUN mkdir -p /app/data /app/state /app/logs /app/images /app/jsonl /app/price_history
+RUN mkdir -p /app/data /app/state /app/logs /app/images /app/jsonl /app/price_history \
+    && chown -R app:app /app
 
 EXPOSE 8000
 
-USER root
+USER app
 
 ENTRYPOINT ["tini", "--"]
 

@@ -82,6 +82,104 @@ def test_results_filter_and_sort_for_keyword_recommendations(tmp_path, monkeypat
     assert resp.status_code == 400
 
 
+def test_profit_estimate_can_be_saved_and_loaded_with_result(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    jsonl_dir = tmp_path / "jsonl"
+    jsonl_dir.mkdir(parents=True, exist_ok=True)
+    target_file = jsonl_dir / "demo_full_data.jsonl"
+    _write_jsonl(
+        target_file,
+        [
+            {
+                "爬取时间": "2026-01-01T01:00:00",
+                "商品信息": {
+                    "商品ID": "1001",
+                    "商品标题": "Demo One",
+                    "商品链接": "https://www.goofish.com/item?id=1001",
+                    "当前售价": "¥100",
+                },
+                "卖家信息": {},
+                "ai_analysis": {"is_recommended": True},
+            }
+        ],
+    )
+
+    app = FastAPI()
+    app.include_router(results.router)
+    client = TestClient(app)
+
+    save_resp = client.put(
+        "/api/results/demo_full_data.jsonl/items/1001/profit-estimate",
+        json={
+            "purchase_price": 100,
+            "resale_price": 180,
+            "platform_fee": 5,
+            "shipping_cost": 8,
+            "other_cost": 2,
+        },
+    )
+    assert save_resp.status_code == 200
+    assert save_resp.json()["estimate"]["profit"] == 65
+
+    list_resp = client.get("/api/results/demo_full_data.jsonl")
+    assert list_resp.status_code == 200
+    estimate = list_resp.json()["items"][0]["profit_estimate"]
+    assert estimate["purchase_price"] == 100
+    assert estimate["resale_price"] == 180
+
+    missing_resp = client.put(
+        "/api/results/demo_full_data.jsonl/items/missing/profit-estimate",
+        json={"purchase_price": 1, "resale_price": 2},
+    )
+    assert missing_resp.status_code == 404
+
+
+def test_inventory_record_can_be_saved_and_loaded_with_result(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    jsonl_dir = tmp_path / "jsonl"
+    jsonl_dir.mkdir(parents=True, exist_ok=True)
+    target_file = jsonl_dir / "demo_full_data.jsonl"
+    _write_jsonl(
+        target_file,
+        [
+            {
+                "爬取时间": "2026-01-01T01:00:00",
+                "商品信息": {
+                    "商品ID": "1001",
+                    "商品标题": "Demo One",
+                    "商品链接": "https://www.goofish.com/item?id=1001",
+                    "当前售价": "¥100",
+                },
+                "卖家信息": {},
+                "ai_analysis": {"is_recommended": True},
+            }
+        ],
+    )
+
+    app = FastAPI()
+    app.include_router(results.router)
+    client = TestClient(app)
+
+    save_resp = client.put(
+        "/api/results/demo_full_data.jsonl/items/1001/inventory",
+        json={
+            "status": "sold",
+            "actual_purchase_price": 100,
+            "actual_sale_price": 180,
+            "actual_platform_fee": 5,
+            "actual_shipping_cost": 8,
+        },
+    )
+    assert save_resp.status_code == 200
+    assert save_resp.json()["record"]["actual_profit"] == 67
+
+    list_resp = client.get("/api/results/demo_full_data.jsonl")
+    assert list_resp.status_code == 200
+    record = list_resp.json()["items"][0]["inventory_record"]
+    assert record["status"] == "sold"
+    assert record["actual_profit"] == 67
+
+
 def test_results_insights_and_export_csv(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     jsonl_dir = tmp_path / "jsonl"
@@ -236,6 +334,139 @@ def test_results_export_csv_supports_unicode_filename(tmp_path, monkeypatch):
     disposition = export_resp.headers["content-disposition"]
     assert 'filename="export.csv"' in disposition
     assert "filename*=UTF-8''%E6%BC%94%E7%A4%BA_full_data.csv" in disposition
+
+
+def test_results_can_sort_and_export_explainable_opportunities(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    jsonl_dir = tmp_path / "jsonl"
+    jsonl_dir.mkdir(parents=True, exist_ok=True)
+    target_file = jsonl_dir / "gpu_full_data.jsonl"
+    _write_jsonl(
+        target_file,
+        [
+            {
+                "爬取时间": "2026-01-03T10:00:00",
+                "搜索关键字": "gpu",
+                "商品信息": {
+                    "商品ID": "3001",
+                    "商品标题": "RTX 4060 Ti 8G 个人自用",
+                    "商品链接": "https://www.goofish.com/item?id=3001",
+                    "当前售价": "¥1800",
+                },
+                "ai_analysis": {"is_recommended": True, "reason": "低于市场"},
+            },
+            {
+                "爬取时间": "2026-01-03T10:01:00",
+                "搜索关键字": "gpu",
+                "商品信息": {
+                    "商品ID": "3002",
+                    "商品标题": "RTX 4060 Ti 8GB 拆机",
+                    "商品链接": "https://www.goofish.com/item?id=3002",
+                    "当前售价": "¥2750",
+                },
+                "ai_analysis": {"is_recommended": True, "reason": "价格较高"},
+            },
+            *[
+                {
+                    "爬取时间": "2026-01-03T10:02:00",
+                    "搜索关键字": "gpu",
+                    "商品信息": {
+                        "商品ID": f"reference-{index}",
+                        "商品标题": "RTX 4060 Ti 8G 个人自用",
+                        "商品链接": f"https://www.goofish.com/item?id=reference-{index}",
+                        "当前售价": f"¥{price}",
+                    },
+                    "ai_analysis": {"is_recommended": False, "reason": "市场参考"},
+                }
+                for index, price in enumerate([2400, 2500, 2600, 2700, 2800], start=1)
+            ],
+        ],
+    )
+    record_market_snapshots(
+        keyword="gpu",
+        task_name="GPU 监控",
+        items=[
+            {"商品ID": "3001", "商品标题": "RTX 4060 Ti 8G", "当前售价": "¥2000", "商品链接": "https://www.goofish.com/item?id=3001"},
+            {"商品ID": "3002", "商品标题": "RTX 4060 Ti 8GB", "当前售价": "¥2700", "商品链接": "https://www.goofish.com/item?id=3002"},
+            *[
+                {"商品ID": f"reference-{index}", "商品标题": "RTX 4060 Ti 8G", "当前售价": f"¥{price}", "商品链接": f"https://www.goofish.com/item?id=reference-{index}"}
+                for index, price in enumerate([2400, 2500, 2600, 2700, 2800], start=1)
+            ],
+        ],
+        run_id="run-1",
+        snapshot_time="2026-01-03T10:05:00",
+        seen_item_ids=set(),
+    )
+
+    app = FastAPI()
+    app.include_router(results.router)
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/results/gpu_full_data.jsonl",
+        params={"sort_by": "opportunity_score", "sort_order": "desc"},
+    )
+    assert response.status_code == 200
+    items = response.json()["items"]
+    items_by_id = {item["商品信息"]["商品ID"]: item for item in items}
+    assert items[0]["商品信息"]["商品ID"] == "3001"
+    assert items_by_id["3001"]["opportunity_assessment"]["score"] is not None
+    assert items_by_id["3002"]["opportunity_assessment"]["score"] is None
+    assert items_by_id["3001"]["opportunity_assessment"]["recommended_max_purchase_price"] is not None
+    assert "拆机" in items_by_id["3002"]["opportunity_assessment"]["risk_notes"]
+
+    export_response = client.get(
+        "/api/results/gpu_full_data.jsonl/export",
+        params={"sort_by": "opportunity_score", "sort_order": "desc"},
+    )
+    assert export_response.status_code == 200
+    assert "机会分" in export_response.text
+    assert "建议最高收货价" in export_response.text
+
+
+def test_result_insights_include_business_summary(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    jsonl_dir = tmp_path / "jsonl"
+    jsonl_dir.mkdir(parents=True, exist_ok=True)
+    target_file = jsonl_dir / "phone_full_data.jsonl"
+    _write_jsonl(
+        target_file,
+        [
+            {
+                "爬取时间": "2026-01-03T10:00:00",
+                "搜索关键字": "phone",
+                "商品信息": {
+                    "商品ID": "4001",
+                    "商品标题": "iPhone 15 Pro 256GB",
+                    "商品链接": "https://www.goofish.com/item?id=4001",
+                    "当前售价": "¥3000",
+                },
+                "卖家信息": {},
+                "ai_analysis": {"is_recommended": True},
+            }
+        ],
+    )
+    app = FastAPI()
+    app.include_router(results.router)
+    client = TestClient(app)
+
+    save_response = client.put(
+        "/api/results/phone_full_data.jsonl/items/4001/inventory",
+        json={
+            "status": "sold",
+            "actual_purchase_price": 2500,
+            "actual_sale_price": 3000,
+            "actual_platform_fee": 30,
+        },
+    )
+    assert save_response.status_code == 200
+
+    insights_response = client.get("/api/results/phone_full_data.jsonl/insights")
+    assert insights_response.status_code == 200
+    summary = insights_response.json()["business_summary"]
+    assert summary["tracked_items"] == 1
+    assert summary["realized_profit"] == 470
+    assert summary["status_counts"]["sold"] == 1
 
 
 def test_results_blacklist_rules_hide_items_from_view_and_insights(tmp_path, monkeypatch):

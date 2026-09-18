@@ -143,6 +143,15 @@ def _atomic_write_json(path: str, data: dict) -> None:
     os.replace(tmp, path)
 
 
+def _write_json_to_open_file(fh, data: dict) -> None:
+    """Write state through an already-open handle (required on Windows)."""
+    fh.seek(0)
+    fh.truncate()
+    json.dump(data, fh, ensure_ascii=False, indent=2, sort_keys=True)
+    fh.flush()
+    os.fsync(fh.fileno())
+
+
 @dataclass(frozen=True)
 class SkipDecision:
     skip: bool
@@ -198,7 +207,8 @@ class FailureGuard:
                     entry = {}
                 entry = updater(entry) or entry
                 tasks[task_key] = entry
-                self._save(data)
+                # Windows cannot replace a file while this process has it open.
+                _write_json_to_open_file(fh, data)
                 return entry
 
     def record_success(self, task_key: str, *, now: Optional[datetime] = None) -> None:

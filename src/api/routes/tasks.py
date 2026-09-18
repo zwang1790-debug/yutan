@@ -22,12 +22,14 @@ from src.services.task_generation_runner import (
 )
 from src.services.task_payloads import serialize_task, serialize_tasks
 from src.domain.models.task import TaskCreate, TaskUpdate, TaskGenerateRequest
-from src.prompt_utils import generate_criteria
+from src.prompt_utils import generate_criteria, validate_generated_criteria
 from src.utils import resolve_task_log_path
 from src.services.account_strategy_service import normalize_account_strategy
 from src.infrastructure.persistence.storage_names import build_result_filename
 from src.services.price_history_service import delete_price_snapshots
 from src.services.result_storage_service import delete_result_file_records
+from src.services.task_preflight_service import build_task_preflight
+from src.services.task_run_history_service import get_task_history
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 async def _reload_scheduler_if_needed(
@@ -127,6 +129,20 @@ async def generate_task(
         import traceback
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=error_msg)
+@router.get("/preflight/{task_id}", response_model=dict)
+async def preflight_task(task_id: int, service: TaskService = Depends(get_task_service)):
+    """检查任务启动前的本地环境，不读取或返回敏感内容。"""
+    task = await service.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务未找到")
+    return build_task_preflight(task)
+
+@router.get("/history/{task_id}", response_model=dict)
+async def get_task_history_route(task_id: int, service: TaskService = Depends(get_task_service)):
+    if not await service.get_task(task_id):
+        raise HTTPException(status_code=404, detail="任务未找到")
+    return get_task_history(task_id)
+
 @router.get("/generate-jobs/{job_id}", response_model=dict)
 async def get_task_generation_job(
     job_id: str,
@@ -188,9 +204,10 @@ async def update_task(
                     user_description=description_for_ai,
                     reference_file_path="prompts/macbook_criteria.txt"
                 )
-                if not generated_criteria or len(generated_criteria.strip()) == 0:
-                    print("AI 返回的内容为空")
-                    raise HTTPException(status_code=500, detail="AI 未能生成分析标准，返回内容为空。")
+                try:
+                    generated_criteria = validate_generated_criteria(generated_criteria)
+                except ValueError as exc:
+                    raise HTTPException(status_code=500, detail=str(exc)) from exc
                 print(f"保存新的分析标准到: {output_filename}")
                 os.makedirs("prompts", exist_ok=True)
                 async with aiofiles.open(output_filename, 'w', encoding='utf-8') as f:
@@ -263,6 +280,14 @@ async def start_task(
         raise HTTPException(status_code=400, detail="任务已被禁用，无法启动")
     if task.is_running:
         raise HTTPException(status_code=400, detail="任务已在运行中")
+    preflight = build_task_preflight(task)
+    if getattr(process_service, "preflight_enabled", False) and not preflight["ready"]:
+        failed = "；".join(
+            f'{check["label"]}：{check["fix"] or check["detail"]}'
+            for check in preflight["checks"]
+            if not check["passed"]
+        )
+        raise HTTPException(status_code=400, detail=f"启动前检查未通过：{failed}")
     success = await process_service.start_task(task_id, task.task_name)
     if not success:
         raise HTTPException(status_code=500, detail="启动任务失败")

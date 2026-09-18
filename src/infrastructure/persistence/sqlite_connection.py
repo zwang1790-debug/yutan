@@ -97,6 +97,37 @@ SCHEMA_STATEMENTS = (
         updated_at TEXT NOT NULL
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS profit_estimates (
+        result_filename TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        purchase_price REAL NOT NULL,
+        resale_price REAL NOT NULL,
+        platform_fee REAL NOT NULL DEFAULT 0,
+        shipping_cost REAL NOT NULL DEFAULT 0,
+        other_cost REAL NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (result_filename, item_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS inventory_records (
+        result_filename TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'discovered',
+        actual_purchase_price REAL,
+        actual_sale_price REAL,
+        actual_platform_fee REAL NOT NULL DEFAULT 0,
+        actual_shipping_cost REAL NOT NULL DEFAULT 0,
+        actual_other_cost REAL NOT NULL DEFAULT 0,
+        notes TEXT NOT NULL DEFAULT '',
+        purchased_at TEXT,
+        listed_at TEXT,
+        sold_at TEXT,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (result_filename, item_id)
+    )
+    """,
     "CREATE INDEX IF NOT EXISTS idx_tasks_name ON tasks(task_name)",
     """
     CREATE INDEX IF NOT EXISTS idx_results_filename_crawl
@@ -121,6 +152,14 @@ SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS idx_snapshots_keyword_item_time
     ON price_snapshots(keyword_slug, item_id, snapshot_time DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_profit_estimates_filename
+    ON profit_estimates(result_filename, updated_at DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_inventory_records_filename_status
+    ON inventory_records(result_filename, status, updated_at DESC)
     """,
 )
 

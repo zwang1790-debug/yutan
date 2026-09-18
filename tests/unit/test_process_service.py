@@ -70,6 +70,10 @@ def test_process_service_marks_task_stopped_when_process_exits(monkeypatch, tmp_
 
         assert ("stopped", 0) in events
         assert service.is_running(0) is False
+        log_text = (tmp_path / "task-0.log").read_text(encoding="utf-8")
+        assert "Preparing task 'task-a'" in log_text
+        assert "Crawler process started (PID 4321)" in log_text
+        assert "Crawler completed (exit code 0)" in log_text
 
     asyncio.run(run_scenario())
 
@@ -109,3 +113,57 @@ def test_process_service_adds_debug_limit_arg_when_env_enabled(monkeypatch):
         "--debug-limit",
         "1",
     ]
+
+
+def test_process_service_writes_real_child_output_to_task_log(monkeypatch, tmp_path):
+    async def run_scenario():
+        service = ProcessService()
+        service.failure_guard.should_skip_start = lambda *args, **kwargs: SimpleNamespace(
+            skip=False,
+            should_notify=False,
+            reason="",
+            consecutive_failures=0,
+            paused_until=None,
+        )
+        stopped = asyncio.Event()
+        service.set_lifecycle_hooks(on_stopped=lambda _task_id: stopped.set())
+        monkeypatch.setattr(
+            service,
+            "_build_spawn_command",
+            lambda _task_name: [sys.executable, "-u", "-c", "print('crawler-output')"],
+        )
+        monkeypatch.setattr(
+            "src.services.process_service.build_task_log_path",
+            lambda task_id, _task_name: str(tmp_path / f"task-{task_id}.log"),
+        )
+
+        assert await service.start_task(7, "task-a") is True
+        await asyncio.wait_for(stopped.wait(), timeout=5)
+
+        log_text = (tmp_path / "task-7.log").read_text(encoding="utf-8")
+        assert "crawler-output" in log_text
+        assert "Crawler completed (exit code 0)" in log_text
+
+    asyncio.run(run_scenario())
+
+
+def test_process_service_stops_tasks_when_license_expires(monkeypatch):
+    async def run_scenario():
+        service = ProcessService()
+        stopped = asyncio.Event()
+        service.processes[3] = FakeProcess(pid=9876)
+        async def fake_stop_all():
+            stopped.set()
+
+        monkeypatch.setattr(service, "stop_all", fake_stop_all)
+        monkeypatch.setattr(
+            "src.services.process_service.get_license_status",
+            lambda: SimpleNamespace(entitled=False, code="TRIAL_EXPIRED", state="expired"),
+        )
+
+        service.start_license_monitor()
+        await asyncio.wait_for(stopped.wait(), timeout=1)
+
+        await service.stop_license_monitor()
+
+    asyncio.run(run_scenario())

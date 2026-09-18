@@ -23,29 +23,29 @@ const emit = defineEmits<{
 
 <template>
   <Card class="app-surface overflow-hidden border-none">
-    <CardHeader>
+    <CardHeader class="settings-card-header">
       <CardTitle>{{ t('rotation.title') }}</CardTitle>
       <CardDescription>{{ t('rotation.description') }}</CardDescription>
     </CardHeader>
-    <CardContent v-if="isReady" class="grid gap-6 lg:grid-cols-2">
-      <section class="app-surface-subtle p-5">
-        <div class="mb-5 flex items-center justify-between">
-          <div>
+    <CardContent v-if="isReady" class="settings-card-content grid gap-6 lg:grid-cols-2">
+      <section class="settings-subsection">
+        <div class="mb-6 flex items-start justify-between gap-4">
+          <div class="min-w-0">
             <h3 class="font-semibold text-slate-900">{{ t('rotation.account.title') }}</h3>
-            <p class="text-sm text-slate-500">{{ t('rotation.account.description') }}</p>
+            <p class="mt-1 text-sm leading-5 text-slate-500">{{ t('rotation.account.description') }}</p>
           </div>
-          <Switch v-model:checked="settings.ACCOUNT_ROTATION_ENABLED" />
+          <Switch class="shrink-0" v-model:checked="settings.ACCOUNT_ROTATION_ENABLED" />
         </div>
 
-        <div class="grid gap-4">
-          <div class="grid gap-2">
+        <div class="grid gap-5">
+          <div class="settings-field">
             <Label>{{ t('rotation.account.stateDir') }}</Label>
-            <Input v-model="settings.ACCOUNT_STATE_DIR" placeholder="state" />
+            <Input v-model="settings.ACCOUNT_STATE_DIR" class="settings-input" placeholder="state" />
           </div>
-          <div class="grid gap-2">
+          <div class="settings-field">
             <Label>{{ t('rotation.mode') }}</Label>
             <Select v-model="settings.ACCOUNT_ROTATION_MODE">
-              <SelectTrigger>
+              <SelectTrigger class="settings-select-trigger">
                 <SelectValue :placeholder="t('rotation.modePlaceholder')" />
               </SelectTrigger>
               <SelectContent>
@@ -54,33 +54,33 @@ const emit = defineEmits<{
               </SelectContent>
             </Select>
           </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="grid gap-2">
+          <div class="grid gap-5 sm:grid-cols-2">
+            <div class="settings-field">
               <Label>{{ t('rotation.retryLimit') }}</Label>
-              <Input v-model.number="settings.ACCOUNT_ROTATION_RETRY_LIMIT" type="number" min="1" />
+              <Input v-model.number="settings.ACCOUNT_ROTATION_RETRY_LIMIT" class="settings-input" type="number" min="1" />
             </div>
-            <div class="grid gap-2">
+            <div class="settings-field">
               <Label>{{ t('rotation.blacklistTtl') }}</Label>
-              <Input v-model.number="settings.ACCOUNT_BLACKLIST_TTL" type="number" min="0" />
+              <Input v-model.number="settings.ACCOUNT_BLACKLIST_TTL" class="settings-input" type="number" min="0" />
             </div>
           </div>
         </div>
       </section>
 
-      <section class="app-surface-subtle p-5">
-        <div class="mb-5 flex items-center justify-between">
-          <div>
+      <section class="settings-subsection">
+        <div class="mb-6 flex items-start justify-between gap-4">
+          <div class="min-w-0">
             <h3 class="font-semibold text-slate-900">{{ t('rotation.proxy.title') }}</h3>
-            <p class="text-sm text-slate-500">{{ t('rotation.proxy.description') }}</p>
+            <p class="mt-1 text-sm leading-5 text-slate-500">{{ t('rotation.proxy.description') }}</p>
           </div>
-          <Switch v-model:checked="settings.PROXY_ROTATION_ENABLED" />
+          <Switch class="shrink-0" v-model:checked="settings.PROXY_ROTATION_ENABLED" />
         </div>
 
-        <div class="grid gap-4">
-          <div class="grid gap-2">
+        <div class="grid gap-5">
+          <div class="settings-field">
             <Label>{{ t('rotation.mode') }}</Label>
             <Select v-model="settings.PROXY_ROTATION_MODE">
-              <SelectTrigger>
+              <SelectTrigger class="settings-select-trigger">
                 <SelectValue :placeholder="t('rotation.modePlaceholder')" />
               </SelectTrigger>
               <SelectContent>
@@ -89,31 +89,31 @@ const emit = defineEmits<{
               </SelectContent>
             </Select>
           </div>
-          <div class="grid gap-2">
+          <div class="settings-field">
             <Label>{{ t('rotation.proxy.pool') }}</Label>
             <Textarea
               v-model="settings.PROXY_POOL"
-              class="min-h-[120px]"
+              class="min-h-[140px]"
               placeholder="http://127.0.0.1:7890,socks5://127.0.0.1:1080"
             />
           </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="grid gap-2">
+          <div class="grid gap-5 sm:grid-cols-2">
+            <div class="settings-field">
               <Label>{{ t('rotation.retryLimit') }}</Label>
-              <Input v-model.number="settings.PROXY_ROTATION_RETRY_LIMIT" type="number" min="1" />
+              <Input v-model.number="settings.PROXY_ROTATION_RETRY_LIMIT" class="settings-input" type="number" min="1" />
             </div>
-            <div class="grid gap-2">
+            <div class="settings-field">
               <Label>{{ t('rotation.blacklistTtl') }}</Label>
-              <Input v-model.number="settings.PROXY_BLACKLIST_TTL" type="number" min="0" />
+              <Input v-model.number="settings.PROXY_BLACKLIST_TTL" class="settings-input" type="number" min="0" />
             </div>
           </div>
         </div>
       </section>
     </CardContent>
-    <CardContent v-else class="py-8 text-sm text-gray-500">
+    <CardContent v-else class="settings-card-content py-8 text-sm text-slate-500">
       {{ t('rotation.loading') }}
     </CardContent>
-    <CardFooter v-if="isReady" class="flex justify-end gap-2">
+    <CardFooter v-if="isReady" class="settings-card-footer flex justify-end">
       <Button @click="emit('save')" :disabled="isSaving">{{ t('rotation.save') }}</Button>
     </CardFooter>
   </Card>

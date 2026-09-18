@@ -98,8 +98,16 @@ class ScraperSettings(_EnvSettings):
 class AppSettings(_EnvSettings):
     """应用主配置"""
     server_port: int = _env_field(8000, "SERVER_PORT")
-    web_username: str = _env_field("admin", "WEB_USERNAME")
-    web_password: str = _env_field("admin123", "WEB_PASSWORD")
+    # Empty values trigger the first-run registration flow. Legacy explicit
+    # credentials are supported only to migrate existing installations.
+    web_username: str = _env_field("", "WEB_USERNAME")
+    web_password: str = _env_field("", "WEB_PASSWORD")
+    web_session_secret: str = _env_field("", "WEB_SESSION_SECRET")
+    web_auth_file: str = _env_field("data/web_auth.json", "WEB_AUTH_FILE")
+    web_cookie_secure: bool = _env_field(False, "WEB_COOKIE_SECURE")
+    web_auth_max_attempts: int = _env_field(5, "WEB_AUTH_MAX_ATTEMPTS", ge=1, le=20)
+    web_auth_window_seconds: int = _env_field(900, "WEB_AUTH_WINDOW_SECONDS", ge=60, le=86400)
+    web_auth_lockout_seconds: int = _env_field(900, "WEB_AUTH_LOCKOUT_SECONDS", ge=60, le=86400)
     task_log_retention_days: int = _env_field(7, "TASK_LOG_RETENTION_DAYS", ge=1)
 
     # 文件路径配置

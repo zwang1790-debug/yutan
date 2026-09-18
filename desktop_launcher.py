@@ -6,12 +6,18 @@ import os
 import sys
 import time
 import webbrowser
+import asyncio
 from pathlib import Path
 
 import uvicorn
 
-# PyInstaller 运行时资源目录：_MEIPASS；未打包时则为当前文件所在目录
-BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+# For onedir builds, writable data and bundled browsers live beside the EXE.
+# In source mode, keep the project directory as the working root.
+BASE_DIR = (
+    Path(sys.executable).resolve().parent
+    if getattr(sys, "frozen", False)
+    else Path(__file__).resolve().parent
+)
 
 
 def _prepare_environment() -> None:
@@ -19,6 +25,9 @@ def _prepare_environment() -> None:
     os.chdir(BASE_DIR)
     if str(BASE_DIR) not in sys.path:
         sys.path.insert(0, str(BASE_DIR))
+    bundled_browsers = BASE_DIR / ".playwright-browsers"
+    if bundled_browsers.exists():
+        os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(bundled_browsers))
 
 
 def run_app() -> None:
@@ -42,5 +51,18 @@ def run_app() -> None:
     )
 
 
+def run_worker() -> None:
+    """Run the crawler worker when a frozen build starts a child process."""
+    _prepare_environment()
+    from spider_v2 import main as spider_main
+
+    asyncio.run(spider_main())
+
+
 if __name__ == "__main__":
-    run_app()
+    if "--worker" in sys.argv:
+        # Remove the launcher-only flag before spider_v2 parses its arguments.
+        sys.argv.remove("--worker")
+        run_worker()
+    else:
+        run_app()

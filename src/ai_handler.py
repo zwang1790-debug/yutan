@@ -11,11 +11,16 @@ from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 
 import requests
 
-# 设置标准输出编码为UTF-8，解决Windows控制台编码问题
+# Set console output to UTF-8 on Windows without detaching the underlying stream.
+# ``detach()`` breaks redirected file handles and pytest's output capture, which can
+# make a child crawler exit before it has written anything to its task log.
 if sys.platform.startswith('win'):
-    import codecs
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
-    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, OSError, ValueError):
+            # Some embedded/captured streams do not support reconfiguration.
+            pass
 
 from src.config import (
     AI_DEBUG_MODE,

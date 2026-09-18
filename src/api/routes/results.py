@@ -23,9 +23,14 @@ from src.services.result_storage_service import (
     load_visible_result_item_ids,
     query_result_records,
     result_file_exists,
+    result_item_exists,
     save_result_blacklist_keywords,
     update_item_status,
 )
+from src.services.profit_estimate_service import calculate_profit, save_profit_estimate
+from src.services.inventory_service import save_inventory_record
+from src.services.opportunity_score_service import sort_records_by_opportunity
+from src.services.business_summary_service import load_result_business_summary
 
 
 router = APIRouter(prefix="/api/results", tags=["results"])
@@ -100,24 +105,39 @@ async def get_result_file_content(
 
     try:
         validate_result_filename(filename)
-        total_items, items = await query_result_records(
-            filename,
-            ai_recommended_only=ai_recommended_only,
-            keyword_recommended_only=keyword_recommended_only,
-            sort_by=sort_by,
-            sort_order=sort_order,
-            page=page,
-            limit=limit,
-            include_hidden=include_hidden,
-        )
+        if sort_by == "opportunity_score":
+            all_items = await load_all_result_records(
+                filename,
+                ai_recommended_only=ai_recommended_only,
+                keyword_recommended_only=keyword_recommended_only,
+                sort_by="crawl_time",
+                sort_order="desc",
+                include_hidden=include_hidden,
+            )
+            enriched = sort_records_by_opportunity(
+                enrich_records_with_price_insight(all_items, filename), sort_order
+            )
+            total_items = len(enriched)
+            offset = (page - 1) * limit
+            paginated_results = enriched[offset : offset + limit]
+        else:
+            total_items, items = await query_result_records(
+                filename,
+                ai_recommended_only=ai_recommended_only,
+                keyword_recommended_only=keyword_recommended_only,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                page=page,
+                limit=limit,
+                include_hidden=include_hidden,
+            )
+            paginated_results = enrich_records_with_price_insight(items, filename)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"读取结果文件时出错: {exc}")
     if total_items <= 0 and not await result_file_exists(filename):
         raise HTTPException(status_code=404, detail="结果文件未找到")
-    paginated_results = enrich_records_with_price_insight(items, filename)
-
     return {
         "total_items": total_items,
         "page": page,
@@ -132,7 +152,11 @@ async def get_result_file_insights(filename: str):
         validate_result_filename(filename)
         keyword = filename.replace("_full_data.jsonl", "")
         visible_item_ids = load_visible_result_item_ids(filename)
-        return build_price_history_insights(keyword, visible_item_ids=visible_item_ids)
+        insights = build_price_history_insights(keyword, visible_item_ids=visible_item_ids)
+        insights["business_summary"] = await load_result_business_summary(
+            filename, visible_item_ids
+        )
+        return insights
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -162,9 +186,10 @@ async def export_result_file_content(
             sort_order=sort_order,
             include_hidden=include_hidden,
         )
-        csv_text = build_results_csv(
-            enrich_records_with_price_insight(results, filename)
-        )
+        enriched_results = enrich_records_with_price_insight(results, filename)
+        if sort_by == "opportunity_score":
+            enriched_results = sort_records_by_opportunity(enriched_results, sort_order)
+        csv_text = build_results_csv(enriched_results)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
@@ -191,6 +216,24 @@ class BlacklistRulesRequest(BaseModel):
     keywords: list[str]
 
 
+class ProfitEstimateRequest(BaseModel):
+    purchase_price: float
+    resale_price: float
+    platform_fee: float = 0
+    shipping_cost: float = 0
+    other_cost: float = 0
+
+
+class InventoryRecordRequest(BaseModel):
+    status: str
+    actual_purchase_price: float | None = None
+    actual_sale_price: float | None = None
+    actual_platform_fee: float | None = None
+    actual_shipping_cost: float | None = None
+    actual_other_cost: float | None = None
+    notes: str | None = None
+
+
 @router.patch("/{filename}/items/{item_id}/status")
 async def patch_item_status(filename: str, item_id: str, body: UpdateStatusRequest):
     """更新指定商品的状态（active/hidden/expired）"""
@@ -202,6 +245,38 @@ async def patch_item_status(filename: str, item_id: str, body: UpdateStatusReque
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return {"message": "状态已更新", "status": body.status.value}
+
+
+@router.put("/{filename}/items/{item_id}/profit-estimate")
+async def put_profit_estimate(
+    filename: str, item_id: str, body: ProfitEstimateRequest
+):
+    try:
+        validate_result_filename(filename)
+        if not await result_item_exists(filename, item_id):
+            raise HTTPException(status_code=404, detail="商品未找到，无法保存利润估算。")
+        estimate = save_profit_estimate(filename, item_id, body.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"message": "利润估算已保存", "estimate": calculate_profit(estimate)}
+
+
+@router.put("/{filename}/items/{item_id}/inventory")
+async def put_inventory_record(
+    filename: str, item_id: str, body: InventoryRecordRequest
+):
+    try:
+        validate_result_filename(filename)
+        if not await result_item_exists(filename, item_id):
+            raise HTTPException(status_code=404, detail="商品未找到，无法保存经营台账。")
+        record = save_inventory_record(
+            filename,
+            item_id,
+            body.model_dump(exclude_unset=True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"message": "经营台账已保存", "record": record}
 
 
 @router.get("/{filename}/blacklist-rules")

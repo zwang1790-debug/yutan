@@ -101,6 +101,93 @@ export interface SystemStatus {
   configured_notification_channels?: string[]
 }
 
+export interface DiagnosticCheck {
+  key: string
+  label: string
+  status: 'pass' | 'warn' | 'info'
+  detail: string
+}
+
+export interface DiagnosticsResponse {
+  success: boolean
+  summary: string
+  checks: DiagnosticCheck[]
+}
+
+export interface ReleaseInfo {
+  product_name: string
+  version: string
+  release_date: string
+  build_type: string
+  support_items: string[]
+  release_notes: string[]
+  support_steps: string[]
+}
+
+export type LocalizedText = Record<'zh' | 'en', string>
+
+export interface ProductPlan {
+  id: string
+  kind: 'software' | 'service'
+  name: LocalizedText
+  description: LocalizedText
+  price: number
+  currency: 'CNY'
+  billing_period: '7_days' | 'monthly' | 'annual' | 'one_time'
+  availability: 'available' | 'coming_soon'
+  badge: LocalizedText
+  features: LocalizedText[]
+  note: LocalizedText
+  recommended: boolean
+}
+
+export interface ProductPricing {
+  product_name: LocalizedText
+  positioning: LocalizedText
+  pricing_version: string
+  last_reviewed: string
+  commercial_stage: 'manual_delivery'
+  plans: ProductPlan[]
+  policies: Record<string, LocalizedText>
+  sales_guardrails: LocalizedText[]
+}
+
+export interface LoginStateStatus {
+  exists: boolean
+  valid_json: boolean
+  path: string
+  updated_at: number | null
+  message: string
+}
+
+export interface LicenseStatus {
+  state: 'trial' | 'licensed' | 'expired' | 'blocked'
+  code: string | null
+  message: string
+  entitled: boolean
+  trial_started_at: number | null
+  trial_expires_at: number | null
+  license_id: string | null
+  plan: string | null
+  issued_at: number | null
+  expires_at: number | null
+  device_hash: string
+  version: string | null
+  clock_tampered: boolean
+}
+
+export async function getLicenseStatus(): Promise<LicenseStatus> {
+  return await http('/api/license/status')
+}
+
+export async function activateLicense(code: string): Promise<LicenseStatus> {
+  return await http('/api/license/activate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  })
+}
+
 export async function getNotificationSettings(): Promise<NotificationSettings> {
   return await http('/api/settings/notifications')
 }
@@ -159,6 +246,18 @@ export async function getSystemStatus(): Promise<SystemStatus> {
   return await http('/api/settings/status')
 }
 
+export async function getDiagnostics(): Promise<DiagnosticsResponse> {
+  return await http('/api/settings/diagnostics')
+}
+
+export async function getReleaseInfo(): Promise<ReleaseInfo> {
+  return await http('/api/settings/release')
+}
+
+export async function getProductPricing(): Promise<ProductPricing> {
+  return await http('/api/settings/pricing')
+}
+
 export async function updateLoginState(content: string): Promise<{ message: string }> {
   return await http('/api/login-state', {
     method: 'POST',
@@ -169,4 +268,35 @@ export async function updateLoginState(content: string): Promise<{ message: stri
 
 export async function deleteLoginState(): Promise<{ message: string }> {
   return await http('/api/login-state', { method: 'DELETE' })
+}
+
+export async function getLoginStateStatus(): Promise<LoginStateStatus> {
+  return await http('/api/login-state/status')
+}
+
+export interface BackupStatus {
+  items: Record<string, number>
+  total_bytes: number
+  full_backup_bytes: number
+  safe_backup_excludes: string[]
+}
+
+export async function getBackupStatus(): Promise<BackupStatus> {
+  return await http('/api/backup/status')
+}
+
+export async function restoreBackup(file: File): Promise<{ message: string; safety_backup: string; backup_type: 'safe' | 'full'; restart_recommended: boolean }> {
+  return await http('/api/backup/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/zip' },
+    body: file,
+  })
+}
+
+export function downloadFullBackup() {
+  window.location.href = '/api/backup/download/full'
+}
+
+export function downloadDiagnosticBundle() {
+  window.location.href = '/api/backup/diagnostic'
 }

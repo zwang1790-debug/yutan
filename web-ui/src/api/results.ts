@@ -1,4 +1,4 @@
-import type { ResultInsights, ResultItem } from '@/types/result.d.ts'
+import type { InventoryRecord, InventoryStatus, ProfitEstimate, ResultInsights, ResultItem } from '@/types/result.d.ts'
 import { http } from '@/lib/http'
 
 export interface GetResultContentParams {
@@ -6,7 +6,7 @@ export interface GetResultContentParams {
   ai_recommended_only?: boolean;
   keyword_recommended_only?: boolean;
   include_hidden?: boolean;
-  sort_by?: 'crawl_time' | 'publish_time' | 'price' | 'keyword_hit_count';
+  sort_by?: 'crawl_time' | 'publish_time' | 'price' | 'keyword_hit_count' | 'opportunity_score';
   sort_order?: 'asc' | 'desc';
   page?: number;
   limit?: number;
@@ -70,5 +70,39 @@ export async function updateItemStatus(filename: string, itemId: string, status:
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
+  })
+}
+
+export async function saveProfitEstimate(
+  filename: string,
+  itemId: string,
+  estimate: Omit<ProfitEstimate, 'profit' | 'margin' | 'updated_at'>
+): Promise<{ message: string; estimate: ProfitEstimate }> {
+  return await http('/api/results/' + encodeURIComponent(filename) + '/items/' + encodeURIComponent(itemId) + '/profit-estimate', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(estimate),
+  })
+}
+
+export type InventoryRecordPayload = {
+  status: InventoryStatus;
+  actual_purchase_price: number | null;
+  actual_sale_price: number | null;
+  actual_platform_fee: number;
+  actual_shipping_cost: number;
+  actual_other_cost: number;
+  notes: string;
+}
+
+export async function saveInventoryRecord(
+  filename: string,
+  itemId: string,
+  record: InventoryRecordPayload
+): Promise<{ message: string; record: InventoryRecord }> {
+  return await http('/api/results/' + encodeURIComponent(filename) + '/items/' + encodeURIComponent(itemId) + '/inventory', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
   })
 }

@@ -52,6 +52,18 @@ const routes = [
         component: () => import('@/views/SettingsView.vue'),
         meta: { titleKey: 'routes.settings', requiresAuth: true },
       },
+      {
+        path: 'pricing',
+        name: 'Pricing',
+        component: () => import('@/views/PricingView.vue'),
+        meta: { titleKey: 'routes.pricing', requiresAuth: true },
+      },
+      {
+        path: 'license',
+        name: 'License',
+        component: () => import('@/views/LicenseView.vue'),
+        meta: { titleKey: 'routes.license', requiresAuth: true },
+      },
     ],
   },
   {
@@ -75,8 +87,9 @@ function updateDocumentTitle() {
   document.title = titleKey ? `${t(titleKey)} - ${appName}` : appName
 }
 
-router.beforeEach((to, _from, next) => {
-  const { isAuthenticated } = useAuth()
+router.beforeEach(async (to, _from, next) => {
+  const { isAuthenticated, restoreSession } = useAuth()
+  await restoreSession()
 
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     next({ name: 'Login', query: { redirect: to.fullPath } })

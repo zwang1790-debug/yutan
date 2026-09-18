@@ -77,5 +77,9 @@ class SchedulerService:
 
     async def _run_task(self, task_id: int, task_name: str):
         """执行定时任务"""
+        from src.services.license_service import get_license_status
+        if not get_license_status().entitled:
+            print("授权未生效，已跳过定时任务")
+            return
         print(f"定时任务触发: 正在为任务 '{task_name}' 启动爬虫...")
         await self.process_service.start_task(task_id, task_name)

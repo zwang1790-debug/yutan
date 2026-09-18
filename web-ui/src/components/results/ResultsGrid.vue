@@ -2,13 +2,16 @@
 import type { ResultItem } from '@/types/result.d.ts'
 import { useI18n } from 'vue-i18n'
 import ResultCard from './ResultCard.vue'
+import { Inbox, SearchX } from 'lucide-vue-next'
 
 interface Props {
   results: ResultItem[]
+  resultFilename: string | null
+  totalItems?: number
   isLoading: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const { t } = useI18n()
 
 const emit = defineEmits<{
@@ -42,11 +45,25 @@ const skeletonItems = Array.from({ length: 8 }, (_, index) => index)
         </div>
       </div>
     </div>
-    <div v-else-if="results.length === 0" class="app-surface text-center py-12 text-gray-500">
-      {{ t('results.grid.empty') }}
+    <div v-else-if="props.results.length === 0" class="app-surface px-6 py-16 text-center">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-[#c8e3f3] bg-[#eaf7ff] text-[#52738b]">
+        <SearchX class="h-6 w-6" aria-hidden="true" />
+      </div>
+      <h2 class="mt-4 text-base font-semibold text-slate-900">{{ t('results.grid.emptyTitle') }}</h2>
+      <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-[#52738b]">{{ t('results.grid.empty') }}</p>
+      <div class="mt-4 inline-flex items-center gap-2 text-xs text-[#52738b]">
+        <Inbox class="h-4 w-4" aria-hidden="true" />
+        {{ t('results.grid.emptyHint') }}
+      </div>
     </div>
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      <ResultCard v-for="item in results" :key="item.商品信息.商品ID" :item="item" @toggle-block="emit('toggle-block', $event)" />
+    <div v-else>
+      <div class="mb-3 flex items-center justify-between gap-3 px-1">
+        <p class="text-sm font-bold text-[#163b57]">{{ t('results.grid.sectionTitle') }}</p>
+        <p class="text-xs font-medium text-[#52738b]">{{ t('results.grid.visibleCount', { count: props.results.length, total: props.totalItems ?? props.results.length }) }}</p>
+      </div>
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ResultCard v-for="item in props.results" :key="item.商品信息.商品ID" :item="item" :filename="props.resultFilename" @toggle-block="emit('toggle-block', $event)" />
+      </div>
     </div>
   </div>
 </template>

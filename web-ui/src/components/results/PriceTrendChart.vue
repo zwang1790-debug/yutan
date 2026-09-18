@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 interface TrendPoint {
   day: string
+  sample_count: number
   avg_price: number | null
   median_price: number | null
 }
@@ -20,6 +21,28 @@ const padding = 24
 const validPoints = computed(() =>
   props.points.filter((point) => point.avg_price !== null && point.avg_price !== undefined)
 )
+
+const latestPoint = computed(() => validPoints.value[validPoints.value.length - 1])
+const firstPoint = computed(() => validPoints.value[0])
+const averageDelta = computed(() => {
+  if (validPoints.value.length < 2 || !firstPoint.value || !latestPoint.value) return null
+  if (firstPoint.value.avg_price === null || latestPoint.value.avg_price === null) return null
+  return latestPoint.value.avg_price - firstPoint.value.avg_price
+})
+
+const trendSummary = computed(() => {
+  if (validPoints.value.length === 1 && latestPoint.value) {
+    return t('results.chart.singleSnapshot', {
+      count: latestPoint.value.sample_count,
+      price: latestPoint.value.avg_price,
+    })
+  }
+  if (averageDelta.value === null) return t('results.chart.noTrend')
+  if (Math.abs(averageDelta.value) < 0.01) return t('results.chart.stable')
+  return averageDelta.value > 0
+    ? t('results.chart.rising', { amount: Math.abs(averageDelta.value).toFixed(0) })
+    : t('results.chart.falling', { amount: Math.abs(averageDelta.value).toFixed(0) })
+})
 
 const valueRange = computed(() => {
   const values = validPoints.value
@@ -73,7 +96,7 @@ const areaPath = computed(() => {
 <template>
   <div class="app-surface-subtle p-4">
     <div class="mb-3 flex flex-col gap-3 text-xs uppercase tracking-[0.22em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-      <span>Daily Price Curve</span>
+      <span>{{ t('results.chart.title') }}</span>
       <div class="flex items-center gap-3">
         <span class="inline-flex items-center gap-1">
           <span class="h-2.5 w-2.5 rounded-full bg-sky-600" />
@@ -91,7 +114,7 @@ const areaPath = computed(() => {
     </div>
 
     <div v-else>
-      <svg :viewBox="`0 0 ${chartWidth} ${chartHeight}`" class="h-[220px] w-full" role="img" :aria-label="t('results.chart.noTrend')">
+      <svg :viewBox="`0 0 ${chartWidth} ${chartHeight}`" class="h-[220px] w-full" role="img" :aria-label="trendSummary">
         <defs>
           <linearGradient id="avg-area-fill" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stop-color="#0284c7" stop-opacity="0.24" />
@@ -118,7 +141,7 @@ const areaPath = computed(() => {
 
         <g v-for="(point, index) in validPoints" :key="point.day">
           <circle :cx="resolveX(index)" :cy="resolveY(point.avg_price as number)" r="5" fill="#0284c7" />
-          <circle :cx="resolveX(index)" :cy="resolveY(point.median_price as number)" r="4" fill="#f59e0b" />
+          <circle v-if="point.median_price !== null && point.median_price !== undefined" :cx="resolveX(index)" :cy="resolveY(point.median_price)" r="4" fill="#f59e0b" />
           <text
             :x="resolveX(index)"
             :y="chartHeight - 6"
@@ -130,6 +153,10 @@ const areaPath = computed(() => {
           </text>
         </g>
       </svg>
+      <div class="mt-3 flex items-start gap-2 rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2.5 text-xs leading-5 text-sky-800" :class="validPoints.length === 1 ? 'border-amber-100 bg-amber-50/80 text-amber-800' : ''">
+        <span class="mt-1 size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
+        <span>{{ trendSummary }}</span>
+      </div>
     </div>
   </div>
 </template>

@@ -1,8 +1,12 @@
-# 闲鱼智能监控系统
+# 鱼探 Radar
 
 [中文] ｜ [English](README_EN.md)
 
-基于 Playwright 和 AI 的闲鱼多任务实时监控，提供完整的 Web 管理界面。
+闲鱼机会监测与智能分析工具。基于 Playwright 和 AI 的多任务实时监控，提供完整的 Web 管理界面。
+
+## 购买与激活
+
+商业版提供 7 天体验、个人月卡/年卡和可选远程部署服务。购买、安装协助和设备授权请查看 [购买与激活说明](SALES.md)。
 
 
 ## 核心特性
@@ -73,17 +77,20 @@ docker compose up -d
 | `OPENAI_API_KEY` | AI 模型 API Key | 是 |
 | `OPENAI_BASE_URL` | OpenAI 兼容接口地址 | 是 |
 | `OPENAI_MODEL_NAME` | 支持图片输入的模型名称 | 是 |
-| `WEB_USERNAME` / `WEB_PASSWORD` | Web UI 登录账号密码，默认 `admin/admin123` | 否 |
+| `WEB_USERNAME` / `WEB_PASSWORD` | 兼容旧版 Web UI 登录账号密码；默认 `admin/admin123` 时首次启动会引导注册 | 否 |
+| `WEB_AUTH_FILE` | 本地管理员账号文件，默认 `data/web_auth.json`；密码和恢复码只保存哈希 | 否 |
 
 其余配置见下方“配置说明”。
 
 
 ### 第一次使用
 
-1. 打开默认 Web UI `http://127.0.0.1:8000` 并登录。
-2. 进入“闲鱼账号管理”，使用 [Chrome 扩展](https://chromewebstore.google.com/detail/xianyu-login-state-extrac/eidlpfjiodpigmfcahkmlenhppfklcoa) 导出并粘贴闲鱼登录态 JSON。
-3. 登录态文件会保存到 `state/` 目录，例如 `state/acc_1.json`。
-4. 回到“任务管理”，创建任务并绑定账号后即可运行。
+1. 打开默认 Web UI `http://127.0.0.1:8000`。首次使用默认账号配置时，先创建管理员账号并保存页面展示的一次性恢复码。
+2. 登录后可在“系统设置 > 账户安全”主动修改密码，或重新生成恢复码；不会强制登录后改密。
+3. 忘记密码时，在登录页选择“忘记密码”，输入用户名、恢复码和新密码。恢复码使用一次后自动失效。
+4. 进入“闲鱼账号管理”，使用 [Chrome 扩展](https://chromewebstore.google.com/detail/xianyu-login-state-extrac/eidlpfjiodpigmfcahkmlenhppfklcoa) 导出并粘贴闲鱼登录态 JSON。
+5. 登录态文件会保存到 `state/` 目录，例如 `state/acc_1.json`。
+6. 回到“任务管理”，创建任务并绑定账号后即可运行。
 
 ### 创建第一个任务
 
@@ -231,9 +238,10 @@ cd web-ui && npm run build
 <details>
 <summary>点击展开认证说明</summary>
 
-- Web UI 当前使用登录页收集账号密码，并通过 `POST /auth/status` 校验。
-- 登录成功后，前端会在浏览器本地保存登录状态，用于路由守卫和 WebSocket 初始化。
-- 默认账号密码为 `admin/admin123`，生产环境请务必修改。
+- Web UI 使用签名 HttpOnly 会话 Cookie；账号文件保存在 `data/web_auth.json`，不保存明文密码。
+- 首次使用默认配置时通过 `POST /auth/register` 创建管理员账号；旧版自定义 `.env` 账号可直接登录并自动迁移。
+- `POST /auth/password` 用于登录后的主动改密，`POST /auth/recover` 用于恢复码找回密码。
+- 恢复码只在注册或重新生成时展示一次，请单独安全保存；恢复成功后旧恢复码自动失效。
 
 </details>
 

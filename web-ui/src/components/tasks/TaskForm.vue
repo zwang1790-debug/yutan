@@ -290,7 +290,7 @@ function handleSubmit() {
             v-model="form.description"
             :placeholder="t('tasks.form.descriptionPlaceholder')"
           />
-          <p v-if="form.decision_mode === 'keyword'" class="text-xs text-gray-500">
+          <p v-if="form.decision_mode === 'keyword'" class="text-xs text-slate-500">
             {{ t('tasks.form.keywordDescriptionHint') }}
           </p>
         </div>
@@ -299,7 +299,7 @@ function handleSubmit() {
         <Label for="analyze-images" class="sm:text-right">{{ t('tasks.form.analyzeImages') }}</Label>
         <div class="space-y-1 sm:col-span-3">
           <Switch id="analyze-images" v-model="form.analyze_images" />
-          <p class="text-xs text-gray-500">
+          <p class="text-xs text-slate-500">
             {{ t('tasks.form.analyzeImagesHint') }}
           </p>
         </div>
@@ -308,7 +308,7 @@ function handleSubmit() {
       <div v-if="form.decision_mode === 'keyword'" class="grid gap-2 sm:grid-cols-4 sm:gap-4">
         <Label class="pt-1 sm:pt-2 sm:text-right">{{ t('tasks.form.keywordRules') }}</Label>
         <div class="space-y-2 sm:col-span-3">
-          <p class="text-xs text-gray-500">
+          <p class="text-xs text-slate-500">
             {{ t('tasks.form.keywordRulesHint') }}
           </p>
           <Textarea
@@ -357,10 +357,10 @@ function handleSubmit() {
                 v-model="form.cron"
                 :placeholder="t('tasks.form.cronCustomPlaceholder')"
               />
-              <p class="text-xs text-gray-500 mt-1">
+              <p class="mt-1 text-xs text-slate-500">
                 {{ t('tasks.form.cronCustomHintLine1') }}
               </p>
-              <p class="text-xs text-gray-500">
+              <p class="text-xs text-slate-500">
                 {{ t('tasks.form.cronCustomHintLine2') }}
               </p>
             </TabsContent>
@@ -379,7 +379,7 @@ function handleSubmit() {
               {{ option.label }}
             </option>
           </select>
-          <p class="text-xs text-gray-500">
+          <p class="text-xs text-slate-500">
             {{ accountStrategyOptions.find((option) => option.value === accountStrategy)?.description }}
           </p>
         </div>
@@ -433,7 +433,7 @@ function handleSubmit() {
         <Label class="sm:text-right">{{ t('tasks.form.region') }}</Label>
         <div class="space-y-1 sm:col-span-3">
           <TaskRegionSelector v-model="form.region as any" />
-          <p class="text-xs text-gray-500">{{ t('tasks.form.regionHint') }}</p>
+          <p class="text-xs text-slate-500">{{ t('tasks.form.regionHint') }}</p>
         </div>
       </div>
     </div>

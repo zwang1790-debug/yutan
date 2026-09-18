@@ -15,9 +15,11 @@ from src.ai_handler import send_ntfy_notification
 from src.config import STATE_FILE
 from src.failure_guard import FailureGuard
 from src.infrastructure.persistence.sqlite_task_repository import find_task_by_name_sync
+from src.services.license_service import get_license_status
 from src.utils import build_task_log_path
 
 STOP_TIMEOUT_SECONDS = 20
+LICENSE_MONITOR_INTERVAL_SECONDS = 15
 SPIDER_DEBUG_LIMIT_ENV = "SPIDER_DEBUG_LIMIT"
 LifecycleHook = Callable[[int], Awaitable[None] | None]
 
@@ -25,15 +27,21 @@ LifecycleHook = Callable[[int], Awaitable[None] | None]
 class ProcessService:
     """进程管理服务"""
 
+    preflight_enabled = True
+
     def __init__(self):
         self.processes: Dict[int, asyncio.subprocess.Process] = {}
         self.log_paths: Dict[int, str] = {}
         self.log_handles: Dict[int, TextIO] = {}
         self.task_names: Dict[int, str] = {}
         self.exit_watchers: Dict[int, asyncio.Task] = {}
+        self.last_exit_codes: Dict[int, int | None] = {}
+        self.manual_stop_ids: set[int] = set()
         self.failure_guard = FailureGuard()
         self._on_started: LifecycleHook | None = None
         self._on_stopped: LifecycleHook | None = None
+        self._license_monitor_task: asyncio.Task | None = None
+        self._license_monitor_stop = asyncio.Event()
 
     def set_lifecycle_hooks(
         self,
@@ -78,6 +86,7 @@ class ProcessService:
             return
 
         self._cleanup_runtime(task_id, process)
+        self.last_exit_codes[task_id] = process.returncode
         await self._invoke_hook(self._on_stopped, task_id)
 
     def _open_log_file(self, task_id: int, task_name: str) -> tuple[str, TextIO]:
@@ -86,14 +95,23 @@ class ProcessService:
         log_file_handle = open(log_file_path, "a", encoding="utf-8")
         return log_file_path, log_file_handle
 
+    def _write_log_marker(self, log_handle: TextIO, message: str) -> None:
+        """Write and flush lifecycle diagnostics before the crawler can emit output."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_handle.write(f"[{timestamp}] [TaskRunner] {message}\n")
+        log_handle.flush()
+
     def _build_spawn_command(self, task_name: str) -> list[str]:
-        command = [
-            sys.executable,
-            "-u",
-            "spider_v2.py",
-            "--task-name",
-            task_name,
-        ]
+        if getattr(sys, "frozen", False):
+            command = [sys.executable, "--worker", "--task-name", task_name]
+        else:
+            command = [
+                sys.executable,
+                "-u",
+                "spider_v2.py",
+                "--task-name",
+                task_name,
+            ]
         debug_limit = str(os.getenv(SPIDER_DEBUG_LIMIT_ENV, "")).strip()
         if debug_limit.isdigit() and int(debug_limit) > 0:
             command.extend(["--debug-limit", debug_limit])
@@ -137,6 +155,11 @@ class ProcessService:
             print(f"任务 '{task_name}' (ID: {task_id}) 已在运行中")
             return False
 
+        entitlement = get_license_status()
+        if not entitlement.entitled:
+            print(f"授权未生效，已阻止任务 '{task_name}' 启动")
+            return False
+
         decision = self.failure_guard.should_skip_start(
             task_name,
             cookie_path=self._resolve_cookie_path(task_name),
@@ -149,8 +172,20 @@ class ProcessService:
         log_file_handle = None
         try:
             log_file_path, log_file_handle = self._open_log_file(task_id, task_name)
+            command = self._build_spawn_command(task_name)
+            self._write_log_marker(
+                log_file_handle,
+                f"Preparing task '{task_name}'. Command: {' '.join(command)}",
+            )
             process = await self._spawn_process(task_name, log_file_handle)
+            self._write_log_marker(
+                log_file_handle,
+                f"Crawler process started (PID {process.pid}). Waiting for crawler output...",
+            )
         except Exception as exc:
+            if log_file_handle is not None:
+                with contextlib.suppress(Exception):
+                    self._write_log_marker(log_file_handle, f"Failed to start crawler: {exc!r}")
             self._close_log_handle(log_file_handle)
             print(f"启动任务 '{task_name}' 失败: {exc}")
             return False
@@ -159,6 +194,45 @@ class ProcessService:
         print(f"启动任务 '{task_name}' (PID: {process.pid})")
         await self._invoke_hook(self._on_started, task_id)
         return True
+
+    def start_license_monitor(self) -> None:
+        """Start the background guard that stops work after entitlement expires."""
+        if self._license_monitor_task is not None and not self._license_monitor_task.done():
+            return
+        self._license_monitor_stop = asyncio.Event()
+        self._license_monitor_task = asyncio.create_task(self._monitor_license())
+
+    async def stop_license_monitor(self) -> None:
+        """Stop the entitlement monitor without affecting task processes."""
+        monitor = self._license_monitor_task
+        if monitor is None:
+            return
+        self._license_monitor_stop.set()
+        monitor.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await monitor
+        self._license_monitor_task = None
+
+    async def _monitor_license(self) -> None:
+        while not self._license_monitor_stop.is_set():
+            try:
+                status = get_license_status()
+                if not status.entitled:
+                    if self.processes:
+                        print(f"授权已失效（{status.code or status.state}），正在停止运行任务")
+                        await self.stop_all()
+                    return
+            except Exception as exc:
+                # A transient status read failure must not kill the monitor.
+                print(f"授权状态检查失败，将稍后重试: {exc}")
+
+            try:
+                await asyncio.wait_for(
+                    self._license_monitor_stop.wait(),
+                    timeout=LICENSE_MONITOR_INTERVAL_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                continue
 
     async def _notify_skip(self, task_name: str, decision) -> None:
         print(
@@ -188,8 +262,21 @@ class ProcessService:
         task_id = self._find_task_id_by_process(process)
         if task_id is None:
             return
+        task_name = self.task_names.get(task_id, str(task_id))
+        log_handle = self.log_handles.get(task_id)
+        if log_handle is not None:
+            exit_kind = "completed" if process.returncode == 0 else "exited unexpectedly"
+            with contextlib.suppress(Exception):
+                self._write_log_marker(
+                    log_handle,
+                    f"Crawler {exit_kind} (exit code {process.returncode}). Task status is being updated.",
+                )
         self._cleanup_runtime(task_id, process)
-        await self._invoke_hook(self._on_stopped, task_id)
+        self.last_exit_codes[task_id] = process.returncode
+        try:
+            await self._invoke_hook(self._on_stopped, task_id)
+        except Exception as exc:
+            print(f"任务 '{task_name}' (ID: {task_id}) 退出后同步状态失败: {exc}")
 
     def _find_task_id_by_process(self, process: asyncio.subprocess.Process) -> int | None:
         for task_id, current_process in self.processes.items():
@@ -239,6 +326,7 @@ class ProcessService:
             return False
 
         try:
+            self.manual_stop_ids.add(task_id)
             await self._terminate_process(process, task_id)
             self._append_stop_marker(self.log_paths.get(task_id))
             await self._await_exit_watcher(task_id)
@@ -290,6 +378,8 @@ class ProcessService:
         self.log_handles = self._reindex_mapping(self.log_handles, deleted_task_id)
         self.task_names = self._reindex_mapping(self.task_names, deleted_task_id)
         self.exit_watchers = self._reindex_mapping(self.exit_watchers, deleted_task_id)
+        self.last_exit_codes = self._reindex_mapping(self.last_exit_codes, deleted_task_id)
+        self.manual_stop_ids = {task_id - 1 if task_id > deleted_task_id else task_id for task_id in self.manual_stop_ids if task_id != deleted_task_id}
 
     def _reindex_mapping(self, mapping: Dict[int, object], deleted_task_id: int) -> Dict[int, object]:
         reindexed: Dict[int, object] = {}

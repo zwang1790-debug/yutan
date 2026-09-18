@@ -1,5 +1,21 @@
 import { http } from '@/lib/http'
 
+export interface LogDiagnosisMatch {
+  category: string
+  title: string
+  severity: 'high' | 'medium'
+  matched: string
+  advice: string
+}
+
+export interface LogDiagnosis {
+  status: 'ok' | 'error' | 'unknown' | 'info'
+  title: string
+  summary: string
+  advice: string
+  matches: LogDiagnosisMatch[]
+}
+
 export async function getLogs(fromPos: number = 0, taskId?: number | null): Promise<{ new_content: string; new_pos: number }> {
   const params: Record<string, number> = { from_pos: fromPos }
   if (taskId !== null && taskId !== undefined) {
@@ -28,4 +44,8 @@ export async function getLogTail(
       limit_lines: limitLines,
     },
   })
+}
+
+export async function diagnoseLogs(taskId: number): Promise<LogDiagnosis> {
+  return await http('/api/logs/diagnose', { params: { task_id: taskId } })
 }

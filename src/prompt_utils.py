@@ -36,6 +36,19 @@ META_PROMPT_TEMPLATE = """
 ProgressCallback = Callable[[str, str], Awaitable[None]]
 
 
+def validate_generated_criteria(text: str) -> str:
+    """Reject a web page accidentally returned instead of analysis criteria."""
+    value = (text or "").strip()
+    lowered = value.lower()
+    if not value:
+        raise ValueError("AI 未能生成分析标准，返回内容为空。")
+    if "<html" in lowered or "<!doctype" in lowered or "<script" in lowered:
+        raise ValueError("AI 分析标准疑似被网页 HTML 污染，未保存。")
+    if len(value) > 100_000:
+        raise ValueError("AI 分析标准异常过长，未保存。")
+    return value
+
+
 async def _report_progress(
     progress_callback: Optional[ProgressCallback],
     step_key: str,

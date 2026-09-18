@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 from collections import defaultdict
 from datetime import datetime
 from statistics import median
@@ -16,6 +17,15 @@ from src.infrastructure.persistence.sqlite_connection import sqlite_connection
 
 PRICE_HISTORY_DIR = "price_history"
 DEFAULT_HISTORY_WINDOW_DAYS = 30
+GPU_VALUATION_WINDOW_DAYS = 30
+GPU_VALUATION_HALF_LIFE_DAYS = 14
+GPU_MIN_VALID_SAMPLES = 5
+GPU_RISK_KEYWORDS = (
+    "维修", "修过", "矿卡", "挖矿", "矿场", "故障", "暗病", "进水",
+    "烧供电", "烧", "花屏", "点不亮", "不开机", "配件机", "尸体",
+    "改bios", "拆机维修", "拆机卡",
+)
+GPU_NON_RETAIL_KEYWORDS = ("笔记本", "移动版", "m版", "3070m", "3060m", "3050m")
 
 
 def normalize_keyword_slug(keyword: str) -> str:
@@ -48,6 +58,74 @@ def parse_price_value(value: Any) -> Optional[float]:
         return round(float(text), 2)
     except (TypeError, ValueError):
         return None
+
+
+def normalize_model_key(title: Any) -> str:
+    """Build a conservative comparable-model key from a listing title."""
+    text = str(title or "").lower()
+    gpu = re.search(r"(?:^|[^a-z])(rtx|gtx|rx)\s*([0-9]{3,4})(?:\s*(ti|super))?(?:$|[^a-z0-9])", text)
+    if gpu:
+        vram = re.search(r"\b(\d{1,2})\s*g(?:b)?\b", text)
+        variant = f" {gpu.group(3)}" if gpu.group(3) else ""
+        return f"{gpu.group(1)} {gpu.group(2)}{variant}" + (f" {vram.group(1)}g" if vram else "")
+
+    apple_laptop = re.search(r"\b(macbook)\s+(air|pro)\s+(m[1-4](?:\s+pro|\s+max)?)\b", text)
+    if apple_laptop:
+        capacity = re.search(r"\b(\d{1,2})\s*(?:\+|g(?:b)?\s*[+/])\s*(\d{3,4})\s*g?(?:b)?\b", text)
+        suffix = f" {capacity.group(1)}g {capacity.group(2)}g" if capacity else ""
+        return f"{apple_laptop.group(1)} {apple_laptop.group(2)} {apple_laptop.group(3).replace(' ', '')}{suffix}"
+
+    iphone = re.search(r"\b(iphone)\s*(1[1-6]|se\s*[2-3])\s*(pro\s*max|pro|plus|mini)?\b", text)
+    if iphone:
+        variant = (iphone.group(3) or "").replace(" ", "")
+        storage = re.search(r"\b(64|128|256|512|1024)\s*g(?:b)?\b", text)
+        return " ".join(part for part in [iphone.group(1), iphone.group(2), variant, f"{storage.group(1)}g" if storage else ""] if part)
+
+    # Keep a useful fallback for non-GPU categories and existing tests.
+    tokens = re.findall(r"[a-z]+[0-9]+[a-z0-9]*|[a-z]{2,}", text)
+    return " ".join(tokens[:4])
+
+
+def _same_model_records(records: Iterable[dict], model_key: str) -> list[dict]:
+    if not model_key:
+        return list(records)
+    return [
+        record
+        for record in records
+        if normalize_model_key(record.get("title")) == model_key
+    ]
+
+
+def _is_gpu_model_key(model_key: str) -> bool:
+    return bool(re.match(r"^(?:rtx|gtx|rx) \d{3,4}", model_key or ""))
+
+
+def _gpu_listing_is_risky(record: dict) -> bool:
+    text = " ".join(
+        [
+            str(record.get("title") or "").lower(),
+            " ".join(str(tag).lower() for tag in (record.get("tags") or [])),
+        ]
+    )
+    return bool(extract_gpu_risk_signals(text)) or any(keyword in text for keyword in GPU_NON_RETAIL_KEYWORDS)
+
+
+def extract_gpu_risk_signals(text: str) -> list[str]:
+    """Return positive GPU risk phrases while respecting common negations."""
+    signals = []
+    normalized = str(text or "").lower()
+    for keyword in GPU_RISK_KEYWORDS:
+        start = 0
+        while True:
+            index = normalized.find(keyword.lower(), start)
+            if index < 0:
+                break
+            prefix = normalized[max(0, index - 3):index]
+            if not re.search(r"(?:非|无|没有|未|不|没)\s*$", prefix):
+                signals.append(keyword)
+                break
+            start = index + len(keyword)
+    return signals
 
 
 def _safe_iso_datetime(value: Optional[str]) -> str:
@@ -233,6 +311,87 @@ def _summarize_prices(records: Iterable[dict]) -> dict:
     }
 
 
+def _weighted_quantile(values: list[tuple[float, float]], quantile: float) -> Optional[float]:
+    if not values:
+        return None
+    ordered = sorted(values, key=lambda entry: entry[0])
+    total_weight = sum(weight for _, weight in ordered)
+    threshold = total_weight * quantile
+    cumulative = 0.0
+    for price, weight in ordered:
+        cumulative += weight
+        if cumulative >= threshold:
+            return round(price, 2)
+    return round(ordered[-1][0], 2)
+
+
+def build_gpu_market_valuation(
+    snapshots: Iterable[dict],
+    model_key: str,
+    *,
+    as_of: Optional[str] = None,
+) -> Optional[dict]:
+    """Build a conservative 30-day GPU price band from clean comparable listings."""
+    if not _is_gpu_model_key(model_key):
+        return None
+
+    records = _same_model_records(snapshots, model_key)
+    if not records:
+        return {
+            "is_eligible": False,
+            "sample_count": 0,
+            "raw_sample_count": 0,
+            "excluded_sample_count": 0,
+            "p25_price": None,
+            "p35_price": None,
+            "p50_price": None,
+            "p75_price": None,
+            "window_days": GPU_VALUATION_WINDOW_DAYS,
+        }
+
+    latest_time = as_of or max(str(record.get("snapshot_time") or "") for record in records)
+    latest_dt = datetime.fromisoformat(latest_time)
+    latest_by_item = _dedupe_latest(records, "item_id")
+    in_window = []
+    for record in latest_by_item:
+        snapshot_time = str(record.get("snapshot_time") or "")
+        try:
+            age_days = max(0.0, (latest_dt - datetime.fromisoformat(snapshot_time)).total_seconds() / 86400)
+        except ValueError:
+            continue
+        if age_days <= GPU_VALUATION_WINDOW_DAYS:
+            in_window.append((record, age_days))
+
+    valid = [entry for entry in in_window if not _gpu_listing_is_risky(entry[0])]
+    weighted_prices = [
+        (float(record["price"]), math.exp(-math.log(2) * age_days / GPU_VALUATION_HALF_LIFE_DAYS))
+        for record, age_days in valid
+        if parse_price_value(record.get("price")) is not None
+    ]
+    prices = [price for price, _ in weighted_prices]
+    if len(prices) >= 4:
+        center = float(median(prices))
+        mad = float(median([abs(price - center) for price in prices]))
+        if mad > 0:
+            max_deviation = 3.5 * 1.4826 * mad
+            weighted_prices = [
+                entry for entry in weighted_prices if abs(entry[0] - center) <= max_deviation
+            ]
+
+    sample_count = len(weighted_prices)
+    return {
+        "is_eligible": sample_count >= GPU_MIN_VALID_SAMPLES,
+        "sample_count": sample_count,
+        "raw_sample_count": len(in_window),
+        "excluded_sample_count": max(0, len(in_window) - sample_count),
+        "p25_price": _weighted_quantile(weighted_prices, 0.25),
+        "p35_price": _weighted_quantile(weighted_prices, 0.35),
+        "p50_price": _weighted_quantile(weighted_prices, 0.50),
+        "p75_price": _weighted_quantile(weighted_prices, 0.75),
+        "window_days": GPU_VALUATION_WINDOW_DAYS,
+    }
+
+
 def _build_daily_trend(snapshots: list[dict]) -> list[dict]:
     grouped: dict[str, list[dict]] = defaultdict(list)
     for snapshot in snapshots:
@@ -275,27 +434,36 @@ def build_item_price_context(
     *,
     item_id: str,
     current_price: Optional[float],
+    item_title: Optional[str] = None,
     market_snapshots: Optional[list[dict]] = None,
 ) -> dict:
     if not item_id:
         return {"observation_count": 0, "deal_score": None, "deal_label": "暂无数据"}
 
     item_snapshots = [record for record in snapshots if str(record.get("item_id")) == str(item_id)]
-    if not item_snapshots:
+    if not item_snapshots and (current_price is None or not item_title):
         return {"observation_count": 0, "deal_score": None, "deal_label": "暂无数据"}
 
-    latest_item_snapshot = item_snapshots[-1]
+    latest_item_snapshot = item_snapshots[-1] if item_snapshots else {}
     price_now = current_price if current_price is not None else parse_price_value(latest_item_snapshot.get("price"))
     historical_prices = [float(record["price"]) for record in item_snapshots if parse_price_value(record.get("price")) is not None]
+    model_key = normalize_model_key(item_title or latest_item_snapshot.get("title"))
     source_snapshots = market_snapshots if market_snapshots is not None else snapshots
     latest_run_id = str(source_snapshots[-1].get("run_id") or "") if source_snapshots else ""
     latest_market = _dedupe_latest(
-        [record for record in source_snapshots if str(record.get("run_id") or "") == latest_run_id],
+        _same_model_records(
+            [record for record in source_snapshots if str(record.get("run_id") or "") == latest_run_id],
+            model_key,
+        ),
         "item_id",
     )
     market_summary = _summarize_prices(latest_market)
     market_avg = market_summary.get("avg_price")
     market_median = market_summary.get("median_price")
+    gpu_valuation = build_gpu_market_valuation(source_snapshots, model_key)
+    if gpu_valuation is not None:
+        market_avg = gpu_valuation["p50_price"] if gpu_valuation["is_eligible"] else None
+        market_median = market_avg
 
     score = 50
     if price_now is not None and market_avg:
@@ -317,14 +485,28 @@ def build_item_price_context(
     return {
         "observation_count": len(historical_prices),
         "current_price": price_now,
-        "avg_price": round(sum(historical_prices) / len(historical_prices), 2),
-        "median_price": round(float(median(historical_prices)), 2),
-        "min_price": round(min(historical_prices), 2),
-        "max_price": round(max(historical_prices), 2),
-        "first_seen_at": item_snapshots[0].get("snapshot_time"),
-        "last_seen_at": latest_item_snapshot.get("snapshot_time"),
+        "avg_price": round(sum(historical_prices) / len(historical_prices), 2) if historical_prices else None,
+        "median_price": round(float(median(historical_prices)), 2) if historical_prices else None,
+        "min_price": round(min(historical_prices), 2) if historical_prices else None,
+        "max_price": round(max(historical_prices), 2) if historical_prices else None,
+        "first_seen_at": item_snapshots[0].get("snapshot_time") if item_snapshots else None,
+        "last_seen_at": latest_item_snapshot.get("snapshot_time") if item_snapshots else None,
         "market_avg_price": market_avg,
         "market_median_price": market_median,
+        "market_sample_count": (
+            gpu_valuation["sample_count"] if gpu_valuation is not None else market_summary.get("sample_count", 0)
+        ),
+        "market_raw_sample_count": (
+            gpu_valuation["raw_sample_count"] if gpu_valuation is not None else market_summary.get("sample_count", 0)
+        ),
+        "market_p25_price": gpu_valuation["p25_price"] if gpu_valuation else None,
+        "market_p35_price": gpu_valuation["p35_price"] if gpu_valuation else None,
+        "market_p50_price": gpu_valuation["p50_price"] if gpu_valuation else market_median,
+        "market_p75_price": gpu_valuation["p75_price"] if gpu_valuation else None,
+        "market_valuation_eligible": gpu_valuation["is_eligible"] if gpu_valuation else bool(market_median),
+        "market_excluded_sample_count": gpu_valuation["excluded_sample_count"] if gpu_valuation else 0,
+        "market_valuation_window_days": gpu_valuation["window_days"] if gpu_valuation else None,
+        "market_model_key": model_key or None,
         "price_change_amount": change_amount,
         "price_change_percent": change_percent,
         "deal_score": score,
@@ -346,16 +528,29 @@ def build_market_reference(
             continue
         current_market_records.append({"price": price})
 
-    market_snapshot = _summarize_prices(current_market_records)
-    history_summary = _summarize_prices(_dedupe_latest(historical_snapshots, "item_id"))
+    model_key = normalize_model_key(item.get("商品标题"))
+    comparable_current_items = _same_model_records(
+        [
+            {"price": price, "title": market_item.get("商品标题", "")}
+            for market_item in current_market_items
+            if (price := parse_price_value(market_item.get("当前售价"))) is not None
+        ],
+        model_key,
+    )
+    market_snapshot = _summarize_prices(comparable_current_items)
+    comparable_history = _same_model_records(historical_snapshots, model_key)
+    history_summary = _summarize_prices(_dedupe_latest(comparable_history, "item_id"))
     item_context = build_item_price_context(
         historical_snapshots,
         item_id=str(item.get("商品ID") or ""),
         current_price=parse_price_value(item.get("当前售价")),
+        item_title=item.get("商品标题"),
+        market_snapshots=comparable_history,
     )
     return {
         "当前搜索样本": market_snapshot,
         "历史价格概览": history_summary,
+        "可比型号": model_key or "未识别型号",
         "本商品价格位置": item_context,
         "关键词": keyword,
     }
@@ -389,11 +584,19 @@ def build_price_history_insights(
         "item_id",
     )
     latest_records_by_item = _dedupe_latest(recent_snapshots, "item_id")
+    grouped_market_summary = {}
+    for record in latest_run_snapshots:
+        model_key = normalize_model_key(record.get("title")) or "未识别型号"
+        grouped_market_summary.setdefault(model_key, []).append(record)
 
     return {
         "market_summary": {
             **_summarize_prices(latest_run_snapshots),
             "snapshot_time": snapshots[-1].get("snapshot_time"),
+            "scope": "关键词总览（商品卡片使用可比型号均价）",
+        },
+        "market_groups": {
+            key: _summarize_prices(value) for key, value in sorted(grouped_market_summary.items())
         },
         "history_summary": {
             "unique_items": len(latest_records_by_item),

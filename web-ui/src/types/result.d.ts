@@ -57,12 +57,98 @@ export interface PriceInsight {
   max_price?: number | null;
   market_avg_price?: number | null;
   market_median_price?: number | null;
+  market_sample_count?: number;
+  market_raw_sample_count?: number;
+  market_p25_price?: number | null;
+  market_p35_price?: number | null;
+  market_p50_price?: number | null;
+  market_p75_price?: number | null;
+  market_valuation_eligible?: boolean;
+  market_excluded_sample_count?: number;
+  market_valuation_window_days?: number | null;
+  market_model_key?: string | null;
   price_change_amount?: number | null;
   price_change_percent?: number | null;
   deal_score?: number | null;
   deal_label?: string;
   first_seen_at?: string | null;
   last_seen_at?: string | null;
+}
+
+export interface OpportunityAssessment {
+  score: number | null;
+  label: string;
+  confidence: 'high' | 'medium' | 'low';
+  suggested_listing_price: number | null;
+  recommended_max_purchase_price: number | null;
+  expected_profit: number | null;
+  expected_margin: number | null;
+  market_sample_count: number;
+  price_discount_percent: number | null;
+  components: Record<string, number>;
+  reasons: string[];
+  risk_notes: string[];
+}
+
+export interface PricingAssessment {
+  status: 'priority_buy' | 'negotiate' | 'not_recommended' | 'insufficient_data' | 'low_confidence' | 'risk_blocked';
+  label: string;
+  can_buy: boolean;
+  confidence: 'high' | 'medium' | 'low';
+  is_gpu: boolean;
+  market_sample_count: number;
+  market_raw_sample_count: number;
+  market_excluded_sample_count: number;
+  min_samples_for_quote: number;
+  price_band: { p25: number | null; p35: number | null; p50: number | null; p75: number | null };
+  quick_sale_price: number | null;
+  conservative_resale_price: number | null;
+  suggested_listing_price: number | null;
+  recommended_max_purchase_price: number | null;
+  expected_profit: number | null;
+  expected_margin: number | null;
+  state_adjustment_rate: number;
+  state_adjustment_signals: string[];
+  cost_breakdown: Record<string, number>;
+  current_price: number | null;
+  gap_to_max_purchase_price: number | null;
+  reasons: string[];
+  risk_notes: string[];
+}
+
+export interface ProfitEstimate {
+  purchase_price: number;
+  resale_price: number;
+  platform_fee: number;
+  shipping_cost: number;
+  other_cost: number;
+  profit?: number;
+  margin?: number;
+  updated_at?: string;
+}
+
+export type InventoryStatus =
+  | 'discovered'
+  | 'contacting'
+  | 'purchased'
+  | 'listed'
+  | 'sold'
+  | 'skipped'
+
+export interface InventoryRecord {
+  status: InventoryStatus;
+  actual_purchase_price: number | null;
+  actual_sale_price: number | null;
+  actual_platform_fee: number;
+  actual_shipping_cost: number;
+  actual_other_cost: number;
+  actual_profit?: number | null;
+  actual_margin?: number | null;
+  notes: string;
+  purchased_at?: string | null;
+  listed_at?: string | null;
+  sold_at?: string | null;
+  updated_at?: string;
 }
 
 export interface ResultInsights {
@@ -91,6 +177,31 @@ export interface ResultInsights {
     max_price: number | null;
   }>;
   latest_snapshot_at?: string | null;
+  business_summary?: BusinessSummary;
+}
+
+export interface BusinessSummary {
+  tracked_items: number;
+  status_counts: Record<string, number>;
+  owned_items: number;
+  open_inventory_items: number;
+  capital_deployed: number;
+  open_inventory_cost: number;
+  sold_items: number;
+  settled_sales: number;
+  realized_profit: number;
+  realized_roi: number | null;
+  average_turnover_days: number | null;
+  turnover_sample_count: number;
+  incomplete_sold_items: number;
+  model_performance: Array<{
+    model_key: string;
+    sold_items: number;
+    settled_sales: number;
+    realized_profit: number;
+    roi: number | null;
+    average_turnover_days: number | null;
+  }>;
 }
 
 export interface ResultItem {
@@ -101,6 +212,10 @@ export interface ResultItem {
   "卖家信息": SellerInfo;
   ai_analysis: AiAnalysis;
   price_insight?: PriceInsight;
+  profit_estimate?: ProfitEstimate;
+  inventory_record?: InventoryRecord;
+  opportunity_assessment?: OpportunityAssessment;
+  pricing_assessment?: PricingAssessment;
   _status?: 'active' | 'hidden' | 'expired';
   _effective_hidden?: boolean;
   _hidden_reason?: 'manual' | 'rule' | 'expired' | null;

@@ -2,6 +2,7 @@
 设置管理路由
 """
 import os
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ from src.infrastructure.config.settings import (
     reload_settings,
     scraper_settings,
 )
+from src.infrastructure.persistence.storage_names import DEFAULT_DATABASE_PATH
 from src.services.ai_request_compat import (
     CHAT_COMPLETIONS_API_MODE,
     RESPONSES_API_MODE,
@@ -35,12 +37,26 @@ from src.services.notification_config_service import (
     prepare_notification_settings_update,
 )
 from src.services.notification_service import build_notification_service
+from src.services.release_info_service import get_release_info
+from src.services.product_pricing_service import get_product_pricing
 from src.services.process_service import ProcessService
 
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 AI_TEST_PROMPT = "Reply with OK only."
 AI_TEST_MAX_OUTPUT_TOKENS = 32
+
+
+@router.get("/release")
+async def get_release_metadata():
+    """Return local product version and support information."""
+    return get_release_info()
+
+
+@router.get("/pricing")
+async def get_pricing_metadata():
+    """Return the current product pricing catalog without entitlement checks."""
+    return get_product_pricing()
 
 
 def _reload_env() -> None:
@@ -249,6 +265,45 @@ async def get_system_status(
             **build_notification_status_flags(notification_settings),
         },
         "configured_notification_channels": build_configured_channels(notification_settings),
+    }
+
+
+@router.get("/diagnostics")
+async def get_diagnostics():
+    """返回本地部署诊断结果，不读取或返回任何密钥内容。"""
+    checks = []
+
+    def add_check(key: str, label: str, ok: bool, detail: str, *, level: str | None = None):
+        checks.append({
+            "key": key,
+            "label": label,
+            "status": level or ("pass" if ok else "warn"),
+            "detail": detail,
+        })
+
+    env_exists = Path(env_manager.env_file).exists()
+    add_check("env", "配置文件", env_exists, "配置文件已加载" if env_exists else "未找到 .env，可在 AI 设置中保存配置")
+    add_check(
+        "ai",
+        "AI 配置",
+        AISettings().is_configured() and bool(env_manager.get_value("OPENAI_API_KEY", "")),
+        "API 地址、模型和密钥均已配置" if AISettings().is_configured() and bool(env_manager.get_value("OPENAI_API_KEY", "")) else "AI 配置不完整，暂时无法进行 AI 分析",
+    )
+    login_path = Path(scraper_settings.state_file)
+    add_check("login", "闲鱼登录态", login_path.exists(), "登录态文件存在" if login_path.exists() else "未找到登录态文件，请先登录闲鱼")
+    db_path = Path(DEFAULT_DATABASE_PATH)
+    add_check("database", "本地数据库", db_path.exists(), "SQLite 数据库正常" if db_path.exists() else "数据库尚未生成，启动一次任务后会自动创建")
+    browser_path = Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", ".playwright-browsers"))
+    browser_ready = browser_path.exists()
+    add_check("browser", "浏览器运行时", browser_ready, "Playwright 浏览器已就绪" if browser_ready else "未找到浏览器运行时，请重新安装或构建 Windows 版本")
+    writable = all(Path(path).exists() and os.access(path, os.W_OK) for path in ("data", "state", "logs", "images", "jsonl", "price_history"))
+    add_check("storage", "数据目录", writable, "数据目录可写" if writable else "部分数据目录不可写，可能影响任务和日志保存")
+
+    failed = sum(1 for check in checks if check["status"] == "warn")
+    return {
+        "success": failed == 0,
+        "summary": "环境检查通过" if failed == 0 else f"发现 {failed} 项需要处理",
+        "checks": checks,
     }
 
 

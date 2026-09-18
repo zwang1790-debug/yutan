@@ -322,6 +322,8 @@ def _build_context_overrides(snapshot: dict) -> dict:
     mobile_flag = _looks_like_mobile(ua or "")
     if mobile_flag is not None:
         overrides["is_mobile"] = mobile_flag
+        if not mobile_flag:
+            overrides["has_touch"] = False
 
     return _clean_kwargs(overrides)
 
@@ -329,10 +331,11 @@ def _build_context_overrides(snapshot: dict) -> dict:
 def _build_extra_headers(raw_headers: Optional[dict]) -> dict:
     if not raw_headers:
         return {}
-    excluded = {"cookie", "content-length"}
+    # Request-specific Sec-Fetch-* headers must not be replayed globally.
+    allowed = {"accept-language", "dnt", "upgrade-insecure-requests"}
     headers = {}
     for key, value in raw_headers.items():
-        if not key or key.lower() in excluded or value is None:
+        if not key or key.lower() not in allowed or value is None:
             continue
         headers[key] = value
     return headers
@@ -654,30 +657,49 @@ async def scrape_xianyu(task_config: dict, debug_limit: int = 0):
                 search_url = f"https://www.goofish.com/search?{urlencode(params)}"
                 log_time(f"目标URL: {search_url}")
 
-                # 先监听搜索接口响应，再执行导航，避免错过首次请求
-                async with page.expect_response(
-                    is_search_results_response, timeout=30000
-                ) as initial_response_info:
+                # 监听与页面导航分离，避免接口响应早于/晚于 goto 完成时造成竞态超时。
+                initial_response_future = asyncio.get_running_loop().create_future()
+
+                def _capture_initial_response(response: Response) -> None:
+                    if (
+                        not initial_response_future.done()
+                        and is_search_results_response(response)
+                    ):
+                        initial_response_future.set_result(response)
+
+                page.on("response", _capture_initial_response)
+                try:
                     await page.goto(
                         search_url, wait_until="domcontentloaded", timeout=60000
                     )
-                if _is_login_url(page.url):
-                    raise LoginRequiredError(
-                        f"Login required: redirected to {page.url} (cookies/state likely expired)"
-                    )
-
-                # 捕获初始搜索的API数据
-                initial_response = await initial_response_info.value
-
-                # 等待页面加载出关键筛选元素，以确认已成功进入搜索结果页
-                try:
-                    await page.wait_for_selector("text=新发布", timeout=15000)
-                except PlaywrightTimeoutError as e:
                     if _is_login_url(page.url):
                         raise LoginRequiredError(
                             f"Login required: redirected to {page.url} (cookies/state likely expired)"
+                        )
+
+                    # 先确认结果页已渲染，再取搜索 API 响应。页面渲染成功不应被
+                    # 单个网络事件的时序变化误判为任务失败。
+                    try:
+                        await page.wait_for_selector("text=新发布", timeout=20000)
+                    except PlaywrightTimeoutError as e:
+                        if _is_login_url(page.url):
+                            raise LoginRequiredError(
+                                f"Login required: redirected to {page.url} (cookies/state likely expired)"
+                            ) from e
+                        raise
+
+                    try:
+                        initial_response = await asyncio.wait_for(
+                            asyncio.shield(initial_response_future), timeout=20000
+                        )
+                    except asyncio.TimeoutError as e:
+                        item_count = await page.locator("a[href*='/item']").count()
+                        raise PlaywrightTimeoutError(
+                            "搜索结果页已渲染，但未捕获到搜索接口响应 "
+                            f"(商品链接数: {item_count})"
                         ) from e
-                    raise
+                finally:
+                    page.remove_listener("response", _capture_initial_response)
 
                 # 模拟真实用户行为：页面加载后的初始停留和浏览
                 log_time("[反爬] 模拟用户查看页面...")

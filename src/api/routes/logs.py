@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from src.api.dependencies import get_task_service
 from src.services.task_service import TaskService
 from src.utils import resolve_task_log_path
+from src.services.log_diagnosis_service import diagnose_log
 
 
 router = APIRouter(prefix="/api/logs", tags=["logs"])
@@ -142,6 +143,8 @@ async def get_logs_tail(
             offset_lines=offset_lines,
             limit_lines=limit_lines
         )
+
+
         next_offset = offset_lines + len(lines)
         return {
             "content": "\n".join(lines),
@@ -159,6 +162,31 @@ async def get_logs_tail(
                 "new_pos": 0
             }
         )
+
+
+@router.get("/diagnose")
+async def diagnose_logs(
+    task_id: Optional[int] = Query(default=None, ge=0),
+    task_service: TaskService = Depends(get_task_service),
+):
+    """诊断任务最近日志，不返回密钥或登录态内容。"""
+    if task_id is None:
+        return {"status": "info", "title": "请选择任务", "summary": "请选择任务后再运行诊断。", "advice": "", "matches": []}
+    task = await task_service.get_task(task_id)
+    if not task:
+        return JSONResponse(status_code=404, content={"detail": "任务不存在或已删除。"})
+    path = resolve_task_log_path(task_id, task.task_name)
+    if not os.path.exists(path):
+        return diagnose_log("")
+    try:
+        async with aiofiles.open(path, "rb") as f:
+            await f.seek(0, os.SEEK_END)
+            size = await f.tell()
+            await f.seek(max(0, size - 120_000))
+            content = (await f.read()).decode("utf-8", errors="replace")
+        return diagnose_log(content)
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"detail": f"诊断日志失败: {exc}"})
 
 
 @router.delete("", response_model=dict)
