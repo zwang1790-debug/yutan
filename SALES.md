@@ -1,6 +1,6 @@
 # 鱼探 Radar 购买与激活
 
-鱼探 Radar 是 Windows 本地版的闲鱼行情与货源决策辅助工具，支持关键词/AI 判断、价格参考、历史走势、结果筛选和通知推送。
+鱼探 Radar 是 Windows 本地版的闲鱼行情与货源决策辅助工具，支持关键词/AI 判断、价格参考、历史走势、结果筛选和通知推送。购买用户使用 Windows 安装包即可，不需要自行安装 Docker、Python、Node.js 或 Playwright。
 
 ## 当前方案
 

@@ -2,7 +2,7 @@
 
 [中文] ｜ [English](README_EN.md)
 
-闲鱼机会监测与智能分析工具。基于 Playwright 和 AI 的多任务实时监控，提供完整的 Web 管理界面。
+Windows 本地版闲鱼机会监测与智能分析工具。安装后即可使用 Web 管理界面，不要求普通用户安装 Python、Node.js、Playwright 或 Docker。
 
 ## 购买与激活
 
@@ -11,6 +11,18 @@
 商务微信：**wgviptop**（购买软件、安装协助和激活码）
 
 Telegram 用户交流群 / 更新通知：[加入群聊](https://t.me/+wyTMBj6IuRBjN2U1)
+
+## Windows 用户快速开始
+
+这是面向购买用户的推荐使用方式。Windows 安装包和激活码由商务微信人工发放：
+
+1. 添加商务微信 **wgviptop**，说明你的品类和 Windows 版本，获取最新版安装包或 7 天体验。
+2. 双击 `YuTanRadar-Setup-版本号.exe` 安装；普通用户不需要安装 Docker、Python、Node.js 或 Playwright。
+3. 启动鱼探 Radar，浏览器打开本机管理页面，首次使用时创建管理员账号并保存恢复码。
+4. 在“闲鱼账号管理”中导入登录态，在任务管理中创建一个低频测试任务。
+5. 购买正式版后，在“设备授权”页面复制设备指纹给卖家，粘贴收到的授权码完成激活。
+
+安装、配置和激活遇到问题，可联系微信 **wgviptop**，也可加入 [Telegram 用户交流群](https://t.me/+wyTMBj6IuRBjN2U1) 获取答疑和更新通知。
 
 
 ## 核心特性
@@ -22,7 +34,7 @@ Telegram 用户交流群 / 更新通知：[加入群聊](https://t.me/+wyTMBj6Iu
 - **即时通知**: 支持 ntfy.sh、企业微信、Bark、Telegram、Webhook等多渠道
 - **定时调度**: 支持 Cron 配置周期性任务
 - **账号与代理轮换**: 多账号管理、任务绑定账号、代理池轮换与失败重试
-- **Docker 部署**: 一键容器化部署
+- **Windows 本地版**: 安装包启动，数据保存在本机
 
 ## 截图
 
@@ -31,10 +43,12 @@ Telegram 用户交流群 / 更新通知：[加入群聊](https://t.me/+wyTMBj6Iu
 ![结果查看](static/img_2.png)
 ![通知推送](static/img_3.png)
 
-## 🐳 Docker 部署（推荐）
+## 开发者/自部署（可选）
+
+下面的 Docker、源码和命令行内容只面向开发者或需要自行部署服务器的用户。购买 Windows 版本不需要执行本节命令；直接按上面的“Windows 用户快速开始”操作即可。
 
 ```bash
-git clone https://github.com/Usagi-org/ai-goofish-monitor && cd ai-goofish-monitor
+git clone https://github.com/zwang1790-debug/yutan && cd yutan
 cp .env.example .env
 vim .env # 填写相关配置项
 docker compose up -d
@@ -143,7 +157,7 @@ docker compose up -d
 - Chrome / Edge 浏览器（Linux 环境也可使用 Chromium；`start.sh` 会先检查浏览器是否存在）
 
 ```bash
-git clone https://github.com/Usagi-org/ai-goofish-monitor
+git clone https://github.com/zwang1790-debug/yutan
 cd ai-goofish-monitor
 cp .env.example .env
 ```
@@ -333,6 +347,6 @@ AI 模式会先生成分析标准，再创建任务。现在该流程已改为�
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Usagi-org/ai-goofish-monitor&type=Date)](https://www.star-history.com/#Usagi-org/ai-goofish-monitor&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=zwang1790-debug/yutan&type=Date)](https://www.star-history.com/#zwang1790-debug/yutan&Date)
 
 ![Alt](https://repobeats.axiom.co/api/embed/b40d8a112271b4bddabadd8fe2635be3c1aa28a3.svg "Repobeats analytics image")

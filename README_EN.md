@@ -2,13 +2,25 @@
 
 [中文](README.md) ｜ [English]
 
-A Playwright and AI-powered opportunity monitoring tool for Goofish (闲鱼), featuring a complete web management interface.
+A Windows desktop version of a Playwright and AI-powered opportunity monitoring tool for Goofish (闲鱼). The packaged app includes the local web interface; regular users do not need to install Python, Node.js, Playwright, or Docker.
 
 ## Purchase and Activation
 
 For trial access, installation help, and device activation codes, contact our business WeChat: **wgviptop**. See [SALES.md](SALES.md) for current plans and delivery terms.
 
 Join the Telegram user community for updates and support: [Join the group](https://t.me/+wyTMBj6IuRBjN2U1)
+
+## Windows Quick Start
+
+This is the recommended path for customers. The Windows installer and activation code are delivered manually through business WeChat:
+
+1. Contact **wgviptop** with your product category and Windows version to receive the latest installer or a 7-day trial.
+2. Run `YuTanRadar-Setup-version.exe` to install. Regular users do not need Docker, Python, Node.js, or Playwright.
+3. Launch YuTan Radar, open the local web page in your browser, create the first administrator account, and save the recovery code.
+4. Import your Goofish login state in “Account Management”, then create a low-frequency test task.
+5. After purchase, copy the device fingerprint from “Device Authorization”, send it to the seller, and paste the returned activation code.
+
+For installation, configuration, and activation help, contact **wgviptop** or join the [Telegram user community](https://t.me/+wyTMBj6IuRBjN2U1).
 
 ## Core Features
 
@@ -20,7 +32,7 @@ Join the Telegram user community for updates and support: [Join the group](https
 - **Instant Notifications**: Supports ntfy.sh, WeChat Work (企业微信), Bark, Telegram, Webhook
 - **Scheduled Tasks**: Cron expression configuration for periodic tasks
 - **Account & Proxy Rotation**: Multi-account management, task-account binding, proxy pool rotation with failure retry
-- **Docker Deployment**: One-click containerized deployment
+- **Windows Desktop Build**: Packaged installer with local data storage
 
 ## Screenshots
 
@@ -29,7 +41,9 @@ Join the Telegram user community for updates and support: [Join the group](https
 ![Result Viewer](static/img_2.png)
 ![Notification Settings](static/img_3.png)
 
-## Quick Start
+## Developer Quick Start
+
+The source and command-line instructions below are for developers or self-hosted deployments. Customers using the Windows installer can skip this section.
 
 ### Requirements
 
@@ -39,8 +53,8 @@ Join the Telegram user community for updates and support: [Join the group](https
 - Chrome or Edge on desktop systems. On Linux, Chromium also works. `start.sh` checks this prerequisite before continuing
 
 ```bash
-git clone https://github.com/Usagi-org/ai-goofish-monitor
-cd ai-goofish-monitor
+git clone https://github.com/zwang1790-debug/yutan
+cd yutan
 cp .env.example .env
 ```
 
@@ -78,10 +92,12 @@ chmod +x start.sh
 - `Keyword mode`: provide keyword rules and the task is created immediately.
 - `Region filter`: now uses a province / city / district selector backed by an embedded Xianyu page snapshot instead of manual text input.
 
-## 🐳 Docker Deployment (Recommended)
+## Developer/Self-Hosted Deployment (Optional)
+
+Docker is an optional deployment method for developers and server operators. It is not required for the purchased Windows version.
 
 ```bash
-git clone https://github.com/Usagi-org/ai-goofish-monitor && cd ai-goofish-monitor
+git clone https://github.com/zwang1790-debug/yutan && cd yutan
 cp .env.example .env
 vim .env # fill in the required values
 docker compose up -d
@@ -314,4 +330,4 @@ Also thanks to ClaudeCode/Gemini/Codex and other model tools for freeing our han
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Usagi-org/ai-goofish-monitor&type=Date)](https://www.star-history.com/#Usagi-org/ai-goofish-monitor&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=zwang1790-debug/yutan&type=Date)](https://www.star-history.com/#zwang1790-debug/yutan&Date)
