@@ -10,6 +10,8 @@
 
 商务微信：**wgviptop**（购买软件、安装协助和激活码）
 
+Telegram 用户交流群 / 更新通知：[加入群聊](https://t.me/+wyTMBj6IuRBjN2U1)
+
 
 ## 核心特性
 

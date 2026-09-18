@@ -23,6 +23,8 @@
 
 请添加商务微信 **wgviptop**，咨询购买、安装协助和激活码。
 
+用户交流群与更新通知：<https://t.me/+wyTMBj6IuRBjN2U1>
+
 ## 交付边界
 
 - 当前按 1 台 Windows 设备授权。

@@ -8,6 +8,8 @@ A Playwright and AI-powered opportunity monitoring tool for Goofish (闲鱼), fe
 
 For trial access, installation help, and device activation codes, contact our business WeChat: **wgviptop**. See [SALES.md](SALES.md) for current plans and delivery terms.
 
+Join the Telegram user community for updates and support: [Join the group](https://t.me/+wyTMBj6IuRBjN2U1)
+
 ## Core Features
 
 - **Web Visual Management**: Task management, account management, AI criteria editing, run logs, results browsing
