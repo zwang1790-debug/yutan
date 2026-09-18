@@ -1,354 +1,64 @@
 # 鱼探 Radar
 
-[中文] ｜ [English](README_EN.md)
+Windows 本地版闲鱼行情与货源决策助手。安装包开箱即用，帮助卖家持续监测指定品类、筛选值得进一步核验的商品，并通过 AI 提供价格与风险参考。
 
-Windows 本地版闲鱼机会监测与智能分析工具。安装后即可使用 Web 管理界面，不要求普通用户安装 Python、Node.js、Playwright 或 Docker。
+## 适合谁
 
-## 购买与激活
+- 二手数码、显卡、手机、相机、镜头、游戏主机卖家
+- 有固定品类和采购标准的个人卖家、回收商和工作室
+- 希望减少重复搜索、及时发现新商品的闲鱼经营者
 
-商业版提供 7 天体验、个人月卡/年卡和可选远程部署服务。购买、安装协助和设备授权请查看 [购买与激活说明](SALES.md)。
+## 核心能力
 
-商务微信：**wgviptop**（购买软件、安装协助和激活码）
+- 多任务监控：按关键词、价格、发布时间和地区设置任务
+- AI 判断：根据你的购买需求分析商品信息、图片、卖家和风险
+- 行情参考：查看价格区间、历史位置和机会信号
+- 结果管理：筛选、查看、导出监控结果和运行记录
+- 消息通知：支持企业微信、Telegram、Bark、ntfy 和 Webhook 等渠道
+- 本地运行：数据、登录态和历史记录保存在自己的 Windows 电脑上
 
-Telegram 用户交流群 / 更新通知：[加入群聊](https://t.me/+wyTMBj6IuRBjN2U1)
+## Windows 用户开始使用
 
-## Windows 用户快速开始
-
-这是面向购买用户的推荐使用方式。Windows 安装包和激活码由商务微信人工发放：
+普通用户不需要安装 Docker、Python、Node.js 或 Playwright。
 
 1. 添加商务微信 **wgviptop**，说明你的品类和 Windows 版本，获取最新版安装包或 7 天体验。
-2. 双击 `YuTanRadar-Setup-版本号.exe` 安装；普通用户不需要安装 Docker、Python、Node.js 或 Playwright。
-3. 启动鱼探 Radar，浏览器打开本机管理页面，首次使用时创建管理员账号并保存恢复码。
-4. 在“闲鱼账号管理”中导入登录态，在任务管理中创建一个低频测试任务。
-5. 购买正式版后，在“设备授权”页面复制设备指纹给卖家，粘贴收到的授权码完成激活。
+2. 从 [Releases](https://github.com/zwang1790-debug/yutan/releases) 下载最新版 `YuTanRadar-Setup-版本号.exe`。
+3. 双击安装并启动鱼探 Radar，在浏览器打开本机管理页面。
+4. 首次使用创建管理员账号并保存恢复码，然后导入闲鱼登录态。
+5. 创建一个低频测试任务，确认结果符合你的品类需求。
+6. 购买正式版后，在“设备授权”页面复制设备指纹给卖家，粘贴收到的授权码完成激活。
 
-安装、配置和激活遇到问题，可联系微信 **wgviptop**，也可加入 [Telegram 用户交流群](https://t.me/+wyTMBj6IuRBjN2U1) 获取答疑和更新通知。
+## 购买与服务
 
-最新版安装包请前往仓库 [Releases](https://github.com/zwang1790-debug/yutan/releases) 下载；后续版本会同步发布到这里。开发者可查看 [Windows 发布流程](RELEASING.md)。
+| 方案 | 价格 | 说明 |
+| --- | ---: | --- |
+| 7 天体验 | 9.9 元 | 先验证一个品类，购买年卡可抵扣 |
+| 个人版·月卡 | 29 元/月 | 适合短期测试 |
+| 个人版·首发 | 149 元/年 | 首批用户限量 |
+| 个人版·常规 | 199 元/年 | 长期使用主推方案 |
+| 远程部署 | 69 元/次 | 安装、首次配置和环境诊断 |
 
+购买、安装协助和激活码：微信 **wgviptop**。
 
-## 核心特性
+用户交流群、更新通知和使用答疑：[加入 Telegram 群](https://t.me/+wyTMBj6IuRBjN2U1)。
 
-- **Web 可视化管理**: 任务管理、账号管理、AI 标准编辑、运行日志、结果浏览
-- **AI 驱动**: 自然语言创建任务，多模态模型深度分析商品
-- **多任务并发**: 独立配置关键词、价格、筛选条件和 AI Prompt
-- **高级筛选**: 包邮、新发布时间范围、省/市/区三级区域筛选
-- **即时通知**: 支持 ntfy.sh、企业微信、Bark、Telegram、Webhook等多渠道
-- **定时调度**: 支持 Cron 配置周期性任务
-- **账号与代理轮换**: 多账号管理、任务绑定账号、代理池轮换与失败重试
-- **Windows 本地版**: 安装包启动，数据保存在本机
+完整交付边界和售后说明请查看 [购买与激活说明](SALES.md)。
 
-## 截图
+## 重要说明
 
-![监控概览](static/img.png)
-![任务管理](static/img_1.png)
-![结果查看](static/img_2.png)
-![通知推送](static/img_3.png)
+- 当前按 1 台 Windows 设备授权，换机和特殊授权由人工处理。
+- 大模型 API、代理和第三方通知渠道费用由用户自行承担。
+- 年卡包含购买后 12 个月版本更新与基础排障。
+- 产品是行情与决策辅助工具，不承诺稳定捡漏、自动成交或任何收益。
+- 请遵守闲鱼用户协议和所在地区法律法规，合理控制请求频率。
+- 闲鱼登录态由用户自行导入并保存在本机，请勿发送给他人。
 
-## 开发者/自部署（可选）
+## 隐私与安全
 
-下面的 Docker、源码和命令行内容只面向开发者或需要自行部署服务器的用户。购买 Windows 版本不需要执行本节命令；直接按上面的“Windows 用户快速开始”操作即可。
+登录态、任务、结果、日志和配置默认保存在本地 Windows 数据目录。AI API Key 由用户自行配置，卖家不会在安装包中附带授权私钥。
 
-```bash
-git clone https://github.com/zwang1790-debug/yutan && cd yutan
-cp .env.example .env
-vim .env # 填写相关配置项
-docker compose up -d
-docker compose logs -f app
-docker compose down
-```
+## 联系方式
 
-如果镜像无法访问或下载速度慢，可尝试使用加速：
-```bash
-
-docker pull ghcr.nju.edu.cn/usagi-org/ai-goofish:latest
-docker tag ghcr.nju.edu.cn/usagi-org/ai-goofish:latest ghcr.io/usagi-org/ai-goofish:latest
-docker compose up -d
-
-```
-
-- 默认 Web UI 地址：`http://127.0.0.1:8000`
-- Docker 镜像已内置 Chromium，无需宿主机额外安装浏览器。
-- 官方镜像地址：`ghcr.io/usagi-org/ai-goofish:latest`
-- 更新镜像：`docker compose pull && docker compose up -d`
-- 如果你修改了 `.env` 中的 `SERVER_PORT`，请同步更新 `docker-compose.yaml` 里的端口映射。
-- `docker-compose.yaml` 默认会把 SQLite 主库挂载到 `./data:/app/data`，数据库文件默认为 `data/app.sqlite3`
-- 目前默认持久化这些目录：
-    - `data/`  SQLite 主存储（任务、结果、价格历史）
-    - `state/`  登录状态 cookie 文件
-    - `prompts/`  任务提示词
-    - `logs/`  运行日志
-    - `images/`  商品图片与任务临时图片目录
-    - `config.json`、`jsonl/`、`price_history/`  首次升级到 SQLite 时用于兼容导入的旧数据源
-
-### 数据存储与迁移
-
-- 当前在线主存储为 SQLite，默认路径 `data/app.sqlite3`
-- 可通过环境变量 `APP_DATABASE_FILE` 自定义数据库路径；Docker 默认设置为 `/app/data/app.sqlite3`
-- 应用启动时会自动建库建表，并尝试从旧的 `config.json`、`jsonl/`、`price_history/` 导入一次历史数据
-- `state/`、`prompts/`、`logs/`、`images/` 仍然是文件系统目录，不在 SQLite 中
-- 商品图片会临时落到 `images/task_images_<task_name>/`，任务结束后默认会清理
-- 首次升级完成并确认 `data/app.sqlite3` 中数据正确后，可视部署方式决定是否继续保留旧的 `config.json`、`jsonl/`、`price_history/` 挂载
-
-### 最少配置
-
-| 变量 | 说明 | 必填 |
-|------|------|------|
-| `OPENAI_API_KEY` | AI 模型 API Key | 是 |
-| `OPENAI_BASE_URL` | OpenAI 兼容接口地址 | 是 |
-| `OPENAI_MODEL_NAME` | 支持图片输入的模型名称 | 是 |
-| `WEB_USERNAME` / `WEB_PASSWORD` | 兼容旧版 Web UI 登录账号密码；默认 `admin/admin123` 时首次启动会引导注册 | 否 |
-| `WEB_AUTH_FILE` | 本地管理员账号文件，默认 `data/web_auth.json`；密码和恢复码只保存哈希 | 否 |
-
-其余配置见下方“配置说明”。
-
-
-### 第一次使用
-
-1. 打开默认 Web UI `http://127.0.0.1:8000`。首次使用默认账号配置时，先创建管理员账号并保存页面展示的一次性恢复码。
-2. 登录后可在“系统设置 > 账户安全”主动修改密码，或重新生成恢复码；不会强制登录后改密。
-3. 忘记密码时，在登录页选择“忘记密码”，输入用户名、恢复码和新密码。恢复码使用一次后自动失效。
-4. 进入“闲鱼账号管理”，使用 [Chrome 扩展](https://chromewebstore.google.com/detail/xianyu-login-state-extrac/eidlpfjiodpigmfcahkmlenhppfklcoa) 导出并粘贴闲鱼登录态 JSON。
-5. 登录态文件会保存到 `state/` 目录，例如 `state/acc_1.json`。
-6. 回到“任务管理”，创建任务并绑定账号后即可运行。
-
-### 创建第一个任务
-
-- `AI判断`：填写“详细需求”，提交后会弹出独立进度弹窗，后台异步生成分析标准。
-- `关键词判断`：填写关键词规则，任务会直接创建，不经过 AI 生成流程。
-- `区域筛选`：已改为省 / 市 / 区三级选择器，数据基于闲鱼页面抓取快照内置。
-
-
-
-## 用户使用说明
-
-<details>
-<summary>点击展开 Web UI 功能说明</summary>
-
-### 任务管理
-
-- 支持 AI 创建、关键词规则、价格范围、新发布范围、区域筛选、账号绑定、定时规则。
-- AI 任务创建是后台 job 流程，提交后会打开单独的进度弹窗。
-- 区域筛选会显著缩小结果集，默认留空。
-
-### 账号管理
-
-- 支持导入、更新、删除闲鱼账号登录态。
-- 每个任务可指定账号，也可不绑定并交给系统自动选择。
-
-### 结果查看与运行日志
-
-- 结果页和导出功能现在从 SQLite 查询，不再直接扫描 `jsonl` 文件。
-- 日志页按任务展示运行过程，便于排查登录态失效、风控和 AI 调用问题。
-
-### 系统设置
-
-- 可查看系统状态、编辑 Prompt、调整代理与轮换相关配置。
-
-</details>
-
-
-
-## 开发者开发
-
-### 环境要求
-
-- Python 3.10+
-- Node.js + npm（本地验证 `Node v20.18.3` 可完成前端构建）
-- Playwright CLI 与 Chromium，首次运行前建议执行 `python3 -m pip install playwright && python3 -m playwright install chromium`
-- Chrome / Edge 浏览器（Linux 环境也可使用 Chromium；`start.sh` 会先检查浏览器是否存在）
-
-```bash
-git clone https://github.com/zwang1790-debug/yutan
-cd yutan
-cp .env.example .env
-```
-
-### 一键启动
-
-```bash
-chmod +x start.sh
-./start.sh
-```
-
-`start.sh` 会先检查 Playwright CLI 和浏览器前置条件；在前置条件满足后自动安装项目依赖、构建前端、复制构建产物并启动后端。
-
-### 手动启动
-
-```bash
-# 后端
-python -m src.app
-# 或
-uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
-
-# 前端
-cd web-ui
-npm install
-npm run dev
-```
-
-- FastAPI 启动时会自动初始化 SQLite，并在首次启动时尝试导入旧的 `config.json/jsonl/price_history`
-- `spider_v2.py` 默认从 SQLite 读取任务；只有显式传入 `--config <path>` 时才会走 JSON 配置兼容模式
-- 默认数据库路径为 `data/app.sqlite3`
-- Vite 开发服务器会将 `/api`、`/auth`、`/ws` 代理到 `http://127.0.0.1:8000`。
-- `npm run build` 先生成 `web-ui/dist/`，`start.sh` 再复制到仓库根目录 `dist/`。
-- FastAPI 负责提供根目录 `dist/index.html` 和 `dist/assets/`。
-- `./start.sh` 默认输出访问地址 `http://localhost:8000` 和 API 文档 `http://localhost:8000/docs`。
-
-### 测试与校验
-
-```bash
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest
-cd web-ui && npm run build
-```
-
-### 任务创建 API
-
-<details>
-<summary>点击展开 API 行为说明</summary>
-
-- `POST /api/tasks/generate`
-  - `decision_mode=ai`：返回 `202` 和 `job`，需要继续轮询进度。
-  - `decision_mode=keyword`：直接返回已创建任务。
-- `GET /api/tasks/generate-jobs/{job_id}`：查询 AI 任务生成进度。
-- `POST /auth/status`：校验 Web UI 登录凭据。
-
-</details>
-
-## 配置说明
-
-<details>
-<summary>点击展开常用配置项</summary>
-
-### AI 与运行时
-
-- `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL_NAME`：AI 模型接入必填项。
-- `PROXY_URL`：为 AI 请求单独指定 HTTP/SOCKS5 代理。
-- `RUN_HEADLESS`：是否以无头模式运行爬虫；Docker 中应保持 `true`。
-- `SERVER_PORT`：后端监听端口，默认 `8000`。
-- `LOGIN_IS_EDGE`：本地环境可切换为 Edge 内核；Docker 镜像未内置 Edge，容器内会固定使用 Chromium。
-- `PCURL_TO_MOBILE`：是否将 PC 商品链接转换为移动端链接。
-
-### 通知
-
-- `NTFY_TOPIC_URL`
-- `GOTIFY_URL` / `GOTIFY_TOKEN`
-- `BARK_URL`
-- `WX_BOT_URL`
-- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_API_BASE_URL`
-- `WEBHOOK_*`
-
-### 代理轮换与失败保护
-
-- `PROXY_ROTATION_ENABLED`
-- `PROXY_ROTATION_MODE`
-- `PROXY_POOL`
-- `PROXY_ROTATION_RETRY_LIMIT`
-- `PROXY_BLACKLIST_TTL`
-- `TASK_FAILURE_THRESHOLD`
-- `TASK_FAILURE_PAUSE_SECONDS`
-- `TASK_FAILURE_GUARD_PATH`
-
-完整示例见 `.env.example`。
-
-</details>
-
-## Web 界面认证
-
-<details>
-<summary>点击展开认证说明</summary>
-
-- Web UI 使用签名 HttpOnly 会话 Cookie；账号文件保存在 `data/web_auth.json`，不保存明文密码。
-- 首次使用默认配置时通过 `POST /auth/register` 创建管理员账号；旧版自定义 `.env` 账号可直接登录并自动迁移。
-- `POST /auth/password` 用于登录后的主动改密，`POST /auth/recover` 用于恢复码找回密码。
-- 恢复码只在注册或重新生成时展示一次，请单独安全保存；恢复成功后旧恢复码自动失效。
-
-</details>
-
-## 🚀 工作流程
-
-下图描述了单个监控任务从启动到完成的核心处理逻辑。主服务运行于 `src.app`，按用户操作或定时调度启动一个或多个任务进程。
-
-```mermaid
-graph TD
-    A[启动监控任务] --> B[选择账号/代理配置];
-    B --> C[任务: 搜索商品];
-    C --> D{发现新商品?};
-    D -- 是 --> E[抓取商品详情 & 卖家信息];
-    E --> F[下载商品图片];
-    F --> G[调用AI进行分析];
-    G --> H{AI是否推荐?};
-    H -- 是 --> I[发送通知];
-    H -- 否 --> J[保存记录到 SQLite];
-    I --> J;
-    D -- 否 --> K[翻页/等待];
-    K --> C;
-    J --> C;
-    C --> L{触发风控/异常?};
-    L -- 是 --> M[账号/代理轮换并重试];
-    M --> C;
-```
-
-## 常见问题
-
-<details>
-<summary>点击展开常见问题</summary>
-
-### AI 任务创建为什么不是立即完成？
-
-AI 模式会先生成分析标准，再创建任务。现在该流程已改为后台 job，提交后会显示独立进度弹窗，避免表单长时间卡住。
-
-### 区域筛选为什么默认建议留空？
-
-区域筛选会显著减少搜索结果，适合明确只看某个区域的场景。若你先验证整体市场，建议先不填。
-
-### 本地页面打开后提示前端构建产物不存在？
-
-说明根目录 `dist/` 缺失。可直接执行 `./start.sh`，或先在 `web-ui/` 里执行 `npm run build`，再确认构建产物已复制到仓库根目录。
-
-### `./start.sh` 为什么提示缺少 Playwright 或浏览器？
-
-这是脚本的前置检查。请先安装 Playwright CLI 与 Chromium，并确保系统中可用 Chrome / Edge（Linux 环境也可用 Chromium），然后重新执行 `./start.sh`。
-
-</details>
-
-
-
-## 致谢
-
-<details>
-<summary>点击展开致谢内容</summary>
-
-本项目在开发过程中参考了以下优秀项目，特此感谢：
-
-- [superboyyy/xianyu_spider](https://github.com/superboyyy/xianyu_spider)
-
-以及感谢LinuxDo相关人员的脚本贡献
-
-- [@jooooody](https://linux.do/u/jooooody/summary)
-
-以及感谢 [LinuxDo](https://linux.do/) 社区。
-
-以及感谢 ClaudeCode/Gemini/Codex 等模型工具，解放双手 体验Vibe Coding的快乐。
-
-</details>
-
-
-## 注意事项
-
-<details>
-<summary>点击展开注意事项详情</summary>
-
-- 请遵守闲鱼的用户协议和robots.txt规则，不要进行过于频繁的请求，以免对服务器造成负担或导致账号被限制。
-- 本项目仅供学习和技术研究使用，请勿用于非法用途。
-- 本项目采用 [MIT 许可证](LICENSE) 发布，按"现状"提供，不提供任何形式的担保。
-- 项目作者及贡献者不对因使用本软件而导致的任何直接、间接、附带或特殊的损害或损失承担责任。
-- 如需了解更多详细信息，请查看 [免责声明](DISCLAIMER.md) 文件。
-
-</details>
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=zwang1790-debug/yutan&type=Date)](https://www.star-history.com/#zwang1790-debug/yutan&Date)
-
-![Alt](https://repobeats.axiom.co/api/embed/b40d8a112271b4bddabadd8fe2635be3c1aa28a3.svg "Repobeats analytics image")
+- 商务微信：**wgviptop**
+- Telegram 用户群：[加入群聊](https://t.me/+wyTMBj6IuRBjN2U1)
+- 最新版本：[GitHub Releases](https://github.com/zwang1790-debug/yutan/releases)
