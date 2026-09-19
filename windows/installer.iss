@@ -3,7 +3,7 @@
 
 #define AppName "鱼探 Radar"
 #ifndef AppVersion
-#define AppVersion "2.1.1"
+#define AppVersion "2.1.2"
 #endif
 #define AppPublisher "鱼探 Radar"
 #define AppExeName "YuTanRadar.exe"

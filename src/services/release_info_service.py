@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 PRODUCT_NAME = "鱼探 Radar"
-VERSION = "2.1.1"
-RELEASE_DATE = "2026-09-06"
+VERSION = "2.1.2"
+RELEASE_DATE = "2026-09-19"
 
 
 def get_release_info() -> dict:
@@ -20,6 +20,8 @@ def get_release_info() -> dict:
             "本地备份与恢复",
         ],
         "release_notes": [
+            "升级 Windows 商业版构建版本至 2.1.2。",
+            "统一购买、设备授权和本地数据保护流程。",
             "新增任务运行历史，记录最近 30 次执行结果。",
             "新增任务成功、失败、手动停止统计。",
             "新增脱敏诊断包，便于售后排查且不包含 API Key、Cookie 和登录态。",
