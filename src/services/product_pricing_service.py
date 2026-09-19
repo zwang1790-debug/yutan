@@ -209,7 +209,7 @@ def get_product_pricing() -> dict[str, Any]:
                 "Basic support covers installation, configuration, and clear faults; it does not promise managed operations, automated sales, or profit.",
             ),
             "delivery": _text(
-                "购买后由客服确认订单并发送安装包、配置说明和授权码。",
+                "购买后由客服人工确认订单并发送安装包、配置说明和授权码。",
                 "After purchase, support confirms the order and sends the installer, setup notes, and license code.",
             ),
         },

@@ -54,6 +54,17 @@ jobs:
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "tag=v$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
+      - name: Set up Python for release checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate release metadata
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: python tools/check_release.py --version $env:VERSION
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y

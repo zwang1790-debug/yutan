@@ -1,9 +1,17 @@
 from pathlib import Path
+import re
 
 from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _release_version() -> str:
+    content = (ROOT / "src" / "services" / "release_info_service.py").read_text(encoding="utf-8")
+    match = re.search(r'^VERSION\s*=\s*"([^"]+)"', content, flags=re.MULTILINE)
+    assert match, "release_info_service.py must define VERSION"
+    return match.group(1)
 
 
 def test_windows_delivery_chain_uses_yutan_radar_brand():
@@ -25,7 +33,7 @@ def test_windows_delivery_chain_uses_yutan_radar_brand():
     assert "鱼探 Radar" in content
 
     installer = (ROOT / "windows" / "installer.iss").read_text(encoding="utf-8")
-    assert '#define AppVersion "2.1.1"' in installer
+    assert f'#define AppVersion "{_release_version()}"' in installer
     assert "AiGoofishMonitor" not in content
 
 
@@ -34,7 +42,7 @@ def test_installer_preserves_upgrade_identity_and_uses_branded_entrypoint():
 
     assert "AppId={{B8D5A96B-6E8E-4A78-9A80-4F9CC8B0A721}" in content
     assert '#define AppName "鱼探 Radar"' in content
-    assert '#define AppVersion "2.1.1"' in content
+    assert f'#define AppVersion "{_release_version()}"' in content
     assert '#define AppExeName "YuTanRadar.exe"' in content
     assert r'#define ReleaseDir "..\release\YuTanRadar"' in content
     assert r"DefaultDirName={localappdata}\Programs\YuTanRadar" in content
